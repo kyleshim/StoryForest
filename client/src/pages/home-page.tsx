@@ -44,7 +44,9 @@ export default function HomePage() {
   return (
     <MainLayout>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-heading font-bold">Welcome, {user?.name}</h1>
+        <h1 className="text-2xl font-heading font-bold">
+          Welcome, {user?.firstName || user?.username || 'Friend'}
+        </h1>
         <Button onClick={() => setAddChildOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Add Child
         </Button>
