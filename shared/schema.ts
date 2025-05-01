@@ -1,21 +1,37 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Session storage table for Replit Auth
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// User model updated for Replit Auth
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  email: text("email").notNull(),
-  name: text("name").notNull(),
+  id: varchar("id").primaryKey().notNull(),
+  username: varchar("username", { length: 64 }).notNull().unique(),
+  email: varchar("email", { length: 255 }),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  bio: text("bio"),
+  profileImageUrl: varchar("profile_image_url"),
   isPublic: boolean("is_public").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const children = pgTable("children", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   age: integer("age").notNull(),
-  userId: integer("user_id").notNull(),
+  userId: varchar("user_id").notNull(),
 });
 
 export const books = pgTable("books", {
@@ -45,12 +61,18 @@ export const wishlistBooks = pgTable("wishlist_books", {
 
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users).pick({
+  id: true,
   username: true,
-  password: true,
   email: true,
-  name: true,
+  firstName: true,
+  lastName: true,
+  bio: true,
+  profileImageUrl: true,
   isPublic: true,
 });
+
+// Schema for upsert operations with Replit Auth
+export const upsertUserSchema = insertUserSchema;
 
 export const insertChildSchema = createInsertSchema(children).pick({
   name: true,
@@ -80,6 +102,7 @@ export const insertWishlistBookSchema = createInsertSchema(wishlistBooks).pick({
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
 
 export type InsertChild = z.infer<typeof insertChildSchema>;

@@ -296,7 +296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const query = req.query.q as string;
       
-      console.log('Book search request:', { query, ageRange });
+      console.log('Book search request:', { query });
       
       if (!query) {
         return res.status(400).send("Search query is required");
@@ -351,7 +351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           author: volumeInfo.authors ? volumeInfo.authors.join(', ') : 'Unknown Author',
           coverUrl,
           isbn,
-          ageRange: ageRange || '',
+          ageRange: '',
           description: volumeInfo.description || '',
           publishedDate: volumeInfo.publishedDate || '',
           olid: googleId // Using Google ID as our olid for consistency
