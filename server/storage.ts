@@ -1,24 +1,28 @@
 import { 
-  User, InsertUser, 
+  User, InsertUser, UpsertUser,
   Child, InsertChild, ChildWithStats,
   Book, InsertBook, BookWithDetails,
   LibraryBook, InsertLibraryBook,
   WishlistBook, InsertWishlistBook,
+  users, children, books, libraryBooks, wishlistBooks
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, sql } from "drizzle-orm";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   // User methods
-  getUser(id: number): Promise<User | undefined>;
+  getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  upsertUser(user: UpsertUser): Promise<User>;
   
   // Child methods
   getChild(id: number): Promise<Child | undefined>;
-  getChildrenByUserId(userId: number): Promise<Child[]>;
+  getChildrenByUserId(userId: string): Promise<Child[]>;
   getChildWithStats(id: number): Promise<ChildWithStats | undefined>;
   createChild(child: InsertChild): Promise<Child>;
   
@@ -40,277 +44,456 @@ export interface IStorage {
   
   // Discovery methods
   getPublicChildren(): Promise<ChildWithStats[]>;
-  getPublicChildrenByUserId(userId: number): Promise<ChildWithStats[]>;
+  getPublicChildrenByUserId(userId: string): Promise<ChildWithStats[]>;
   searchPublicUsers(query: string): Promise<User[]>;
   
   // Session store
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private children: Map<number, Child>;
-  private books: Map<number, Book>;
-  private libraryBooks: Map<number, LibraryBook>;
-  private wishlistBooks: Map<number, WishlistBook>;
-  
-  sessionStore: session.SessionStore;
-  
-  currentUserId: number;
-  currentChildId: number;
-  currentBookId: number;
-  currentLibraryBookId: number;
-  currentWishlistBookId: number;
+export class DatabaseStorage implements IStorage {
+  sessionStore: session.Store;
 
   constructor() {
-    this.users = new Map();
-    this.children = new Map();
-    this.books = new Map();
-    this.libraryBooks = new Map();
-    this.wishlistBooks = new Map();
-    
-    this.currentUserId = 1;
-    this.currentChildId = 1;
-    this.currentBookId = 1;
-    this.currentLibraryBookId = 1;
-    this.currentWishlistBookId = 1;
-    
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000,
+    this.sessionStore = new PostgresSessionStore({
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: true,
+      tableName: "sessions",
+      ttl: 7 * 24 * 60 * 60 // 1 week
     });
   }
 
   // User methods
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+  async getUser(id: string): Promise<User | undefined> {
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      return user;
+    } catch (error) {
+      console.error("Error getting user:", error);
+      return undefined;
+    }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    try {
+      const [user] = await db.select().from(users).where(eq(users.username, username));
+      return user;
+    } catch (error) {
+      console.error("Error getting user by username:", error);
+      return undefined;
+    }
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+    try {
+      const [user] = await db.insert(users).values(insertUser).returning();
+      return user;
+    } catch (error) {
+      console.error("Error creating user:", error);
+      throw error;
+    }
+  }
+  
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    try {
+      const [user] = await db
+        .insert(users)
+        .values({ 
+          ...userData,
+          updatedAt: new Date() 
+        })
+        .onConflictDoUpdate({
+          target: users.id,
+          set: {
+            ...userData,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+      return user;
+    } catch (error) {
+      console.error("Error upserting user:", error);
+      throw error;
+    }
   }
 
   // Child methods
   async getChild(id: number): Promise<Child | undefined> {
-    return this.children.get(id);
+    try {
+      const [child] = await db.select().from(children).where(eq(children.id, id));
+      return child;
+    } catch (error) {
+      console.error("Error getting child:", error);
+      return undefined;
+    }
   }
 
-  async getChildrenByUserId(userId: number): Promise<Child[]> {
-    return Array.from(this.children.values()).filter(
-      (child) => child.userId === userId,
-    );
+  async getChildrenByUserId(userId: string): Promise<Child[]> {
+    try {
+      const result = await db.select().from(children).where(eq(children.userId, userId));
+      return result;
+    } catch (error) {
+      console.error("Error getting children by user ID:", error);
+      return [];
+    }
   }
 
   async getChildWithStats(id: number): Promise<ChildWithStats | undefined> {
-    const child = this.children.get(id);
-    if (!child) return undefined;
+    try {
+      const child = await this.getChild(id);
+      if (!child) return undefined;
 
-    const libraryCount = Array.from(this.libraryBooks.values()).filter(
-      (lb) => lb.childId === id
-    ).length;
+      // Count library books
+      const libraryBooksQuery = db
+        .select({ count: sql<number>`count(*)` })
+        .from(libraryBooks)
+        .where(eq(libraryBooks.childId, id));
 
-    const wishlistCount = Array.from(this.wishlistBooks.values()).filter(
-      (wb) => wb.childId === id
-    ).length;
+      // Count wishlist books
+      const wishlistBooksQuery = db
+        .select({ count: sql<number>`count(*)` })
+        .from(wishlistBooks)
+        .where(eq(wishlistBooks.childId, id));
 
-    return {
-      ...child,
-      libraryCount,
-      wishlistCount,
-    };
+      const [libraryResult, wishlistResult] = await Promise.all([
+        libraryBooksQuery,
+        wishlistBooksQuery
+      ]);
+
+      const libraryCount = libraryResult[0]?.count || 0;
+      const wishlistCount = wishlistResult[0]?.count || 0;
+
+      return {
+        ...child,
+        libraryCount,
+        wishlistCount,
+      };
+    } catch (error) {
+      console.error("Error getting child stats:", error);
+      return undefined;
+    }
   }
 
   async createChild(insertChild: InsertChild): Promise<Child> {
-    const id = this.currentChildId++;
-    const child: Child = { ...insertChild, id };
-    this.children.set(id, child);
-    return child;
+    try {
+      const [child] = await db.insert(children).values(insertChild).returning();
+      return child;
+    } catch (error) {
+      console.error("Error creating child:", error);
+      throw error;
+    }
   }
 
   // Book methods
   async getBook(id: number): Promise<Book | undefined> {
-    return this.books.get(id);
+    try {
+      const [book] = await db.select().from(books).where(eq(books.id, id));
+      return book;
+    } catch (error) {
+      console.error("Error getting book:", error);
+      return undefined;
+    }
   }
 
   async getBookByOlid(olid: string): Promise<Book | undefined> {
-    return Array.from(this.books.values()).find(
-      (book) => book.olid === olid,
-    );
+    try {
+      const [book] = await db.select().from(books).where(eq(books.olid, olid));
+      return book;
+    } catch (error) {
+      console.error("Error getting book by OLID:", error);
+      return undefined;
+    }
   }
 
   async createBook(insertBook: InsertBook): Promise<Book> {
-    const id = this.currentBookId++;
-    const book: Book = { ...insertBook, id };
-    this.books.set(id, book);
-    return book;
+    try {
+      const [book] = await db.insert(books).values(insertBook).returning();
+      return book;
+    } catch (error) {
+      console.error("Error creating book:", error);
+      throw error;
+    }
   }
 
   // Library methods
   async addBookToLibrary(insertLibraryBook: InsertLibraryBook): Promise<LibraryBook> {
-    const id = this.currentLibraryBookId++;
-    const libraryBook: LibraryBook = { 
-      ...insertLibraryBook, 
-      id, 
-      addedAt: new Date() 
-    };
-    this.libraryBooks.set(id, libraryBook);
-    return libraryBook;
+    try {
+      const libraryBookWithDate = {
+        ...insertLibraryBook,
+        addedAt: new Date()
+      };
+      const [libraryBook] = await db.insert(libraryBooks).values(libraryBookWithDate).returning();
+      return libraryBook;
+    } catch (error) {
+      console.error("Error adding book to library:", error);
+      throw error;
+    }
   }
 
   async removeBookFromLibrary(childId: number, bookId: number): Promise<void> {
-    for (const [id, libraryBook] of this.libraryBooks.entries()) {
-      if (libraryBook.childId === childId && libraryBook.bookId === bookId) {
-        this.libraryBooks.delete(id);
-        return;
-      }
+    try {
+      await db.delete(libraryBooks)
+        .where(and(
+          eq(libraryBooks.childId, childId),
+          eq(libraryBooks.bookId, bookId)
+        ));
+    } catch (error) {
+      console.error("Error removing book from library:", error);
+      throw error;
     }
   }
 
   async getLibraryBooks(childId: number): Promise<BookWithDetails[]> {
-    const libraryBooksForChild = Array.from(this.libraryBooks.values()).filter(
-      (lb) => lb.childId === childId
-    );
+    try {
+      // Get all library books for the child with their details
+      const query = db
+        .select({
+          book: books,
+          inLibrary: sql<boolean>`true`,
+          rating: libraryBooks.rating
+        })
+        .from(libraryBooks)
+        .innerJoin(books, eq(libraryBooks.bookId, books.id))
+        .where(eq(libraryBooks.childId, childId));
 
-    const result: BookWithDetails[] = [];
-    for (const lb of libraryBooksForChild) {
-      const book = this.books.get(lb.bookId);
-      if (book) {
+      const libraryBooksResult = await query;
+
+      // Check wishlist status for each book
+      const result: BookWithDetails[] = [];
+      for (const item of libraryBooksResult) {
+        // Check if this book is in the wishlist
+        const [wishlistBook] = await db
+          .select()
+          .from(wishlistBooks)
+          .where(and(
+            eq(wishlistBooks.childId, childId),
+            eq(wishlistBooks.bookId, item.book.id)
+          ))
+          .limit(1);
+
         result.push({
-          ...book,
+          ...item.book,
           inLibrary: true,
-          inWishlist: this.isBookInWishlist(childId, book.id),
-          rating: lb.rating || null,
+          inWishlist: !!wishlistBook,
+          rating: item.rating
         });
       }
+
+      return result;
+    } catch (error) {
+      console.error("Error getting library books:", error);
+      return [];
     }
-    return result;
   }
 
   async updateBookRating(childId: number, bookId: number, rating: string | null): Promise<void> {
-    for (const [id, libraryBook] of this.libraryBooks.entries()) {
-      if (libraryBook.childId === childId && libraryBook.bookId === bookId) {
-        this.libraryBooks.set(id, { ...libraryBook, rating });
-        return;
-      }
+    try {
+      await db.update(libraryBooks)
+        .set({ rating })
+        .where(and(
+          eq(libraryBooks.childId, childId),
+          eq(libraryBooks.bookId, bookId)
+        ));
+    } catch (error) {
+      console.error("Error updating book rating:", error);
+      throw error;
     }
   }
 
   // Wishlist methods
   async addBookToWishlist(insertWishlistBook: InsertWishlistBook): Promise<WishlistBook> {
-    const id = this.currentWishlistBookId++;
-    const wishlistBook: WishlistBook = { 
-      ...insertWishlistBook, 
-      id, 
-      addedAt: new Date() 
-    };
-    this.wishlistBooks.set(id, wishlistBook);
-    return wishlistBook;
+    try {
+      const wishlistBookWithDate = {
+        ...insertWishlistBook,
+        addedAt: new Date()
+      };
+      const [wishlistBook] = await db.insert(wishlistBooks).values(wishlistBookWithDate).returning();
+      return wishlistBook;
+    } catch (error) {
+      console.error("Error adding book to wishlist:", error);
+      throw error;
+    }
   }
 
   async removeBookFromWishlist(childId: number, bookId: number): Promise<void> {
-    for (const [id, wishlistBook] of this.wishlistBooks.entries()) {
-      if (wishlistBook.childId === childId && wishlistBook.bookId === bookId) {
-        this.wishlistBooks.delete(id);
-        return;
-      }
+    try {
+      await db.delete(wishlistBooks)
+        .where(and(
+          eq(wishlistBooks.childId, childId),
+          eq(wishlistBooks.bookId, bookId)
+        ));
+    } catch (error) {
+      console.error("Error removing book from wishlist:", error);
+      throw error;
     }
   }
 
   async getWishlistBooks(childId: number): Promise<BookWithDetails[]> {
-    const wishlistBooksForChild = Array.from(this.wishlistBooks.values()).filter(
-      (wb) => wb.childId === childId
-    );
+    try {
+      // Get all wishlist books for the child with their details
+      const query = db
+        .select({
+          book: books,
+          inWishlist: sql<boolean>`true`,
+        })
+        .from(wishlistBooks)
+        .innerJoin(books, eq(wishlistBooks.bookId, books.id))
+        .where(eq(wishlistBooks.childId, childId));
 
-    const result: BookWithDetails[] = [];
-    for (const wb of wishlistBooksForChild) {
-      const book = this.books.get(wb.bookId);
-      if (book) {
+      const wishlistBooksResult = await query;
+
+      // For each wishlist book, check if it's in the library and its rating
+      const result: BookWithDetails[] = [];
+      for (const item of wishlistBooksResult) {
+        // Check if book is in library
+        const inLibraryQuery = db
+          .select()
+          .from(libraryBooks)
+          .where(and(
+            eq(libraryBooks.childId, childId),
+            eq(libraryBooks.bookId, item.book.id)
+          ))
+          .limit(1);
+          
+        const [libraryBook] = await inLibraryQuery;
+        
         result.push({
-          ...book,
-          inLibrary: this.isBookInLibrary(childId, book.id),
+          ...item.book,
+          inLibrary: !!libraryBook,
           inWishlist: true,
-          rating: this.getBookRating(childId, book.id),
+          rating: libraryBook?.rating || null,
         });
       }
+
+      return result;
+    } catch (error) {
+      console.error("Error getting wishlist books:", error);
+      return [];
     }
-    return result;
   }
 
   // Discovery methods
   async getPublicChildren(): Promise<ChildWithStats[]> {
-    const publicUserIds = Array.from(this.users.values())
-      .filter(user => user.isPublic)
-      .map(user => user.id);
-    
-    const result: ChildWithStats[] = [];
-    for (const userId of publicUserIds) {
+    try {
+      // Get public users
+      const publicUsers = await db
+        .select()
+        .from(users)
+        .where(eq(users.isPublic, true));
+        
+      const result: ChildWithStats[] = [];
+      
+      // Get children for each public user
+      for (const user of publicUsers) {
+        const childrenWithStats = await this.getPublicChildrenByUserId(user.id);
+        result.push(...childrenWithStats);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error("Error getting public children:", error);
+      return [];
+    }
+  }
+
+  async getPublicChildrenByUserId(userId: string): Promise<ChildWithStats[]> {
+    try {
+      const user = await this.getUser(userId);
+      if (!user || !user.isPublic) return [];
+
       const children = await this.getChildrenByUserId(userId);
+      const result: ChildWithStats[] = [];
+
       for (const child of children) {
         const childWithStats = await this.getChildWithStats(child.id);
         if (childWithStats) {
           result.push(childWithStats);
         }
       }
+
+      return result;
+    } catch (error) {
+      console.error("Error getting public children by user ID:", error);
+      return [];
     }
-    return result;
-  }
-
-  async getPublicChildrenByUserId(userId: number): Promise<ChildWithStats[]> {
-    const user = await this.getUser(userId);
-    if (!user || !user.isPublic) return [];
-
-    const children = await this.getChildrenByUserId(userId);
-    const result: ChildWithStats[] = [];
-
-    for (const child of children) {
-      const childWithStats = await this.getChildWithStats(child.id);
-      if (childWithStats) {
-        result.push(childWithStats);
-      }
-    }
-
-    return result;
   }
 
   async searchPublicUsers(query: string): Promise<User[]> {
-    if (!query) return [];
-    
-    return Array.from(this.users.values()).filter(
-      (user) => user.isPublic && 
-        (user.username.toLowerCase().includes(query.toLowerCase()) ||
-         user.name.toLowerCase().includes(query.toLowerCase()))
-    );
+    try {
+      if (!query) return [];
+      
+      const lowercaseQuery = query.toLowerCase();
+      
+      // Search for public users whose username contains the query
+      const results = await db
+        .select()
+        .from(users)
+        .where(and(
+          eq(users.isPublic, true),
+          sql`LOWER(${users.username}) LIKE ${`%${lowercaseQuery}%`}`
+        ));
+        
+      return results;
+    } catch (error) {
+      console.error("Error searching public users:", error);
+      return [];
+    }
   }
 
   // Helper methods
-  private isBookInWishlist(childId: number, bookId: number): boolean {
-    return Array.from(this.wishlistBooks.values()).some(
-      (wb) => wb.childId === childId && wb.bookId === bookId
-    );
-  }
-
-  private isBookInLibrary(childId: number, bookId: number): boolean {
-    return Array.from(this.libraryBooks.values()).some(
-      (lb) => lb.childId === childId && lb.bookId === bookId
-    );
-  }
-
-  private getBookRating(childId: number, bookId: number): string | null {
-    for (const libraryBook of this.libraryBooks.values()) {
-      if (libraryBook.childId === childId && libraryBook.bookId === bookId) {
-        return libraryBook.rating || null;
-      }
+  private async isBookInWishlist(childId: number, bookId: number): Promise<boolean> {
+    try {
+      const [wishlistBook] = await db
+        .select()
+        .from(wishlistBooks)
+        .where(and(
+          eq(wishlistBooks.childId, childId),
+          eq(wishlistBooks.bookId, bookId)
+        ))
+        .limit(1);
+        
+      return !!wishlistBook;
+    } catch (error) {
+      console.error("Error checking if book is in wishlist:", error);
+      return false;
     }
-    return null;
+  }
+
+  private async isBookInLibrary(childId: number, bookId: number): Promise<boolean> {
+    try {
+      const [libraryBook] = await db
+        .select()
+        .from(libraryBooks)
+        .where(and(
+          eq(libraryBooks.childId, childId),
+          eq(libraryBooks.bookId, bookId)
+        ))
+        .limit(1);
+        
+      return !!libraryBook;
+    } catch (error) {
+      console.error("Error checking if book is in library:", error);
+      return false;
+    }
+  }
+
+  private async getBookRating(childId: number, bookId: number): Promise<string | null> {
+    try {
+      const [libraryBook] = await db
+        .select({ rating: libraryBooks.rating })
+        .from(libraryBooks)
+        .where(and(
+          eq(libraryBooks.childId, childId),
+          eq(libraryBooks.bookId, bookId)
+        ))
+        .limit(1);
+        
+      return libraryBook?.rating || null;
+    } catch (error) {
+      console.error("Error getting book rating:", error);
+      return null;
+    }
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

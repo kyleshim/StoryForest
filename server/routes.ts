@@ -274,8 +274,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users/:id/children", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
     
-    const userId = parseInt(req.params.id);
-    if (isNaN(userId)) return res.status(400).send("Invalid user ID");
+    const userId = req.params.id;
+    if (!userId) return res.status(400).send("Invalid user ID");
     
     const publicChildren = await storage.getPublicChildrenByUserId(userId);
     res.json(publicChildren);

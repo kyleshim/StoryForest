@@ -60,10 +60,34 @@ export async function setupAuth(app: Express) {
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    const user = {};
-    updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
-    verified(null, user);
+    try {
+      const claims = tokens.claims();
+      const user = await upsertUser(claims);
+      
+      // Create a user object with session info
+      const userWithSession = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        bio: user.bio,
+        profileImageUrl: user.profileImageUrl,
+        isPublic: user.isPublic,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        // Add session info
+        claims: claims,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        expires_at: claims?.exp
+      };
+      
+      verified(null, userWithSession);
+    } catch (error) {
+      console.error("Error in verify function:", error);
+      verified(error as Error);
+    }
   };
 
   for (const domain of process.env.REPLIT_DOMAINS!.split(",")) {
@@ -119,7 +143,7 @@ function updateUserSession(
 }
 
 async function upsertUser(claims: any) {
-  await storage.upsertUser({
+  const userData = {
     id: claims["sub"],
     username: claims["username"],
     email: claims["email"],
@@ -128,7 +152,9 @@ async function upsertUser(claims: any) {
     bio: claims["bio"],
     profileImageUrl: claims["profile_image_url"],
     isPublic: true, // Default to public
-  });
+  };
+  
+  return await storage.upsertUser(userData);
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
