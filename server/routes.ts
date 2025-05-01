@@ -295,7 +295,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       const query = req.query.q as string;
-      const ageRange = req.query.ageRange as string;
       
       console.log('Book search request:', { query, ageRange });
       
@@ -305,16 +304,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let searchQuery = query;
       
-      // Add age-appropriate filters if age range is provided
-      if (ageRange) {
-        if (ageRange === '0-2') {
-          searchQuery += " subject:board+books OR subject:baby+books OR subject:toddler";
-        } else if (ageRange === '3-5') {
-          searchQuery += " subject:picture+books OR subject:early+readers";
-        } else if (ageRange === '6-8') {
-          searchQuery += " subject:early+readers OR subject:beginning+readers";
-        }
-      }
+      // Simple search without age filters
+      console.log('Using simple search without age filters');
       
       console.log('Sending request to Google Books API with query:', searchQuery);
       

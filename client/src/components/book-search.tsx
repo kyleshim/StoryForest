@@ -33,23 +33,15 @@ export function BookSearch({
 }: BookSearchProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [ageRange, setAgeRange] = useState(
-    childAge !== undefined 
-      ? childAge <= 2 
-        ? '0-2' 
-        : childAge <= 5 
-          ? '3-5' 
-          : '6-8'
-      : 'any'
-  );
+  // No longer filtering by age range
 
   // Query for book search
   const { data: searchResults, isLoading, error } = useQuery({
-    queryKey: ['/api/books/search', searchQuery, ageRange],
+    queryKey: ['/api/books/search', searchQuery],
     queryFn: async () => {
       if (!searchQuery) return [];
-      console.log('Searching books with query:', searchQuery, 'and age range:', ageRange);
-      const results = await searchBooks(searchQuery, ageRange);
+      console.log('Searching books with query:', searchQuery);
+      const results = await searchBooks(searchQuery);
       console.log('Search results:', results);
       return results;
     },
@@ -79,18 +71,6 @@ export function BookSearch({
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        
-        <Select value={ageRange} onValueChange={setAgeRange}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Age Range" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="any">Any Age</SelectItem>
-            <SelectItem value="0-2">0-2 years</SelectItem>
-            <SelectItem value="3-5">3-5 years</SelectItem>
-            <SelectItem value="6-8">6-8 years</SelectItem>
-          </SelectContent>
-        </Select>
         
         <Button type="submit" disabled={!searchTerm.trim() || isLoading}>
           {isLoading ? (
@@ -126,7 +106,7 @@ export function BookSearch({
           <CardContent className="p-8 text-center">
             <h3 className="text-lg font-heading font-semibold mb-2">No books found</h3>
             <p className="text-neutral-600">
-              Try adjusting your search or selecting a different age range.
+              Try adjusting your search term or try a different query.
             </p>
           </CardContent>
         </Card>

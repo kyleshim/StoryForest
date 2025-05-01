@@ -37,14 +37,11 @@ export interface BookDetailResult extends GoogleBookInfo {
  * @param query Search query
  * @param ageRange Optional age range filter
  */
-export async function searchBooks(query: string, ageRange?: string): Promise<BookSearchResult[]> {
+export async function searchBooks(query: string): Promise<BookSearchResult[]> {
   if (!query) return [];
   
   try {
-    // Don't send the ageRange if it's "any"
-    const ageRangeParam = ageRange && ageRange !== 'any' ? `&ageRange=${encodeURIComponent(ageRange)}` : '';
-    
-    const url = `/api/books/search?q=${encodeURIComponent(query)}${ageRangeParam}`;
+    const url = `/api/books/search?q=${encodeURIComponent(query)}`;
     console.log('API Request URL:', url);
     
     const response = await apiRequest("GET", url);
@@ -101,5 +98,5 @@ export async function getRecommendedBooks(childAge: number): Promise<BookSearchR
     searchTerm = 'early reader books';
   }
   
-  return searchBooks(searchTerm, ageRange);
+  return searchBooks(searchTerm);
 }
