@@ -297,6 +297,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const query = req.query.q as string;
       const ageRange = req.query.ageRange as string;
       
+      console.log('Book search request:', { query, ageRange });
+      
       if (!query) {
         return res.status(400).send("Search query is required");
       }
@@ -314,6 +316,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      console.log('Sending request to Google Books API with query:', searchQuery);
+      
       const response = await axios.get('https://www.googleapis.com/books/v1/volumes', {
         params: {
           q: searchQuery,
@@ -322,6 +326,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           orderBy: 'relevance'
         }
       });
+      
+      console.log('Google Books API response received. Items found:', response.data.items?.length || 0);
 
       // Transform the Google Books API response to match our app's format
       const books = response.data.items ? response.data.items.map((item: any) => {

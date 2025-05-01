@@ -41,10 +41,13 @@ export async function searchBooks(query: string, ageRange?: string): Promise<Boo
   if (!query) return [];
   
   try {
-    const response = await apiRequest(
-      "GET", 
-      `/api/books/search?q=${encodeURIComponent(query)}${ageRange ? `&ageRange=${encodeURIComponent(ageRange)}` : ''}`,
-    );
+    // Don't send the ageRange if it's "any"
+    const ageRangeParam = ageRange && ageRange !== 'any' ? `&ageRange=${encodeURIComponent(ageRange)}` : '';
+    
+    const url = `/api/books/search?q=${encodeURIComponent(query)}${ageRangeParam}`;
+    console.log('API Request URL:', url);
+    
+    const response = await apiRequest("GET", url);
     
     const data = await response.json();
     return data;

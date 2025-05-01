@@ -40,18 +40,26 @@ export function BookSearch({
         : childAge <= 5 
           ? '3-5' 
           : '6-8'
-      : ''
+      : 'any'
   );
 
   // Query for book search
-  const { data: searchResults, isLoading } = useQuery({
+  const { data: searchResults, isLoading, error } = useQuery({
     queryKey: ['/api/books/search', searchQuery, ageRange],
     queryFn: async () => {
       if (!searchQuery) return [];
-      return await searchBooks(searchQuery, ageRange);
+      console.log('Searching books with query:', searchQuery, 'and age range:', ageRange);
+      const results = await searchBooks(searchQuery, ageRange);
+      console.log('Search results:', results);
+      return results;
     },
     enabled: !!searchQuery,
   });
+  
+  // Log any errors
+  if (error) {
+    console.error('Search error:', error);
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,7 +85,7 @@ export function BookSearch({
             <SelectValue placeholder="Age Range" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Any Age</SelectItem>
+            <SelectItem value="any">Any Age</SelectItem>
             <SelectItem value="0-2">0-2 years</SelectItem>
             <SelectItem value="3-5">3-5 years</SelectItem>
             <SelectItem value="6-8">6-8 years</SelectItem>
