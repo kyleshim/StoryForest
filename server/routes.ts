@@ -9,6 +9,7 @@ import {
   insertWishlistBookSchema
 } from "@shared/schema";
 import { z } from "zod";
+import axios from "axios";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
@@ -286,6 +287,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const query = req.query.q as string;
     const users = await storage.searchPublicUsers(query);
     res.json(users);
+  });
+  
+  // Google Books API integration
+  app.get("/api/books/search", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    
+    try {
+      const query = req.query.q as string;
+      const ageRange = req.query.ageRange as string;
+      
+      if (!query) {
+        return res.status(400).send("Search query is required");
+      }
+      
+      let searchQuery = query;
+      
+      // Add age-appropriate filters if age range is provided
+      if (ageRange) {
+        if (ageRange === '0-2') {
+          searchQuery += " subject:board+books OR subject:baby+books OR subject:toddler";
+        } else if (ageRange === '3-5') {
+          searchQuery += " subject:picture+books OR subject:early+readers";
+        } else if (ageRange === '6-8') {
+          searchQuery += " subject:early+readers OR subject:beginning+readers";
+        }
+      }
+      
+      const response = await axios.get('https://www.googleapis.com/books/v1/volumes', {
+        params: {
+          q: searchQuery,
+          maxResults: 20,
+          printType: 'books',
+          orderBy: 'relevance'
+        }
+      });
+
+      // Transform the Google Books API response to match our app's format
+      const books = response.data.items ? response.data.items.map((item: any) => {
+        // Extract the book ID from the selfLink
+        const googleId = item.id;
+        
+        // Get volume info
+        const volumeInfo = item.volumeInfo || {};
+        
+        // Get cover image URL
+        let coverUrl = '';
+        if (volumeInfo.imageLinks) {
+          coverUrl = volumeInfo.imageLinks.thumbnail || volumeInfo.imageLinks.smallThumbnail || '';
+          // Convert HTTP to HTTPS if needed
+          coverUrl = coverUrl.replace('http://', 'https://');
+        }
+        
+        // Get ISBN
+        let isbn = '';
+        if (volumeInfo.industryIdentifiers && volumeInfo.industryIdentifiers.length > 0) {
+          const isbnObj = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_13') || 
+                          volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10') ||
+                          volumeInfo.industryIdentifiers[0];
+          isbn = isbnObj.identifier;
+        }
+        
+        return {
+          googleId,
+          title: volumeInfo.title || 'Unknown Title',
+          author: volumeInfo.authors ? volumeInfo.authors.join(', ') : 'Unknown Author',
+          coverUrl,
+          isbn,
+          ageRange: ageRange || '',
+          description: volumeInfo.description || '',
+          publishedDate: volumeInfo.publishedDate || '',
+          olid: googleId // Using Google ID as our olid for consistency
+        };
+      }) : [];
+      
+      res.json(books);
+    } catch (error) {
+      console.error('Google Books API error:', error);
+      res.status(500).send("Failed to search books");
+    }
+  });
+  
+  // Get book details by Google Books ID
+  app.get("/api/books/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    
+    try {
+      const bookId = req.params.id;
+      
+      if (!bookId) {
+        return res.status(400).send("Book ID is required");
+      }
+      
+      const response = await axios.get(`https://www.googleapis.com/books/v1/volumes/${bookId}`);
+      const item = response.data;
+      
+      // Get volume info
+      const volumeInfo = item.volumeInfo || {};
+      
+      // Get cover image URL
+      let coverUrl = '';
+      if (volumeInfo.imageLinks) {
+        coverUrl = volumeInfo.imageLinks.thumbnail || volumeInfo.imageLinks.smallThumbnail || '';
+        // Convert HTTP to HTTPS if needed
+        coverUrl = coverUrl.replace('http://', 'https://');
+      }
+      
+      // Get ISBN
+      let isbn = '';
+      if (volumeInfo.industryIdentifiers && volumeInfo.industryIdentifiers.length > 0) {
+        const isbnObj = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_13') || 
+                        volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10') ||
+                        volumeInfo.industryIdentifiers[0];
+        isbn = isbnObj.identifier;
+      }
+      
+      const book = {
+        googleId: item.id,
+        title: volumeInfo.title || 'Unknown Title',
+        author: volumeInfo.authors ? volumeInfo.authors.join(', ') : 'Unknown Author',
+        coverUrl,
+        isbn,
+        description: volumeInfo.description || '',
+        publishedDate: volumeInfo.publishedDate || '',
+        pageCount: volumeInfo.pageCount,
+        categories: volumeInfo.categories || [],
+        averageRating: volumeInfo.averageRating,
+        ratingsCount: volumeInfo.ratingsCount,
+        olid: item.id // Using Google ID as our olid for consistency
+      };
+      
+      res.json(book);
+    } catch (error) {
+      console.error('Google Books API error:', error);
+      res.status(500).send("Failed to get book details");
+    }
   });
 
   const httpServer = createServer(app);
