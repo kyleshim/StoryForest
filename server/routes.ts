@@ -14,6 +14,33 @@ import axios from "axios";
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
   setupAuth(app);
+  
+  // User routes
+  app.get("/api/user", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    res.json(req.user);
+  });
+  
+  app.patch("/api/user/privacy", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    
+    try {
+      const isPublic = req.body.isPublic;
+      if (typeof isPublic !== 'boolean') {
+        return res.status(400).json({ error: "isPublic must be a boolean" });
+      }
+      
+      const updatedUser = await storage.upsertUser({
+        ...req.user,
+        isPublic
+      });
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user privacy settings:", error);
+      res.status(500).send("Failed to update privacy settings");
+    }
+  });
 
   // Child routes
   app.get("/api/children", async (req, res) => {
@@ -271,6 +298,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(publicChildren);
   });
   
+  app.get("/api/users/search", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    
+    const query = req.query.q as string;
+    const users = await storage.searchPublicUsers(query);
+    res.json(users);
+  });
+  
   app.get("/api/users/:id/children", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
     
@@ -279,14 +314,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     const publicChildren = await storage.getPublicChildrenByUserId(userId);
     res.json(publicChildren);
-  });
-  
-  app.get("/api/users/search", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
-    
-    const query = req.query.q as string;
-    const users = await storage.searchPublicUsers(query);
-    res.json(users);
   });
   
   // Google Books API integration

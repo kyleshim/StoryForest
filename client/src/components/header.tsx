@@ -1,7 +1,7 @@
 import { useAuth } from '@/hooks/use-auth';
-import { Bell, Menu, Settings, LogOut } from 'lucide-react';
+import { Bell, Settings, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -17,17 +17,14 @@ export function Header() {
 
   const handleLogout = () => {
     logoutMutation.mutate();
-    navigate('/auth');
   };
 
   if (!user) return null;
 
-  const userInitials = user.name
-    .split(' ')
-    .map(name => name[0])
-    .join('')
-    .toUpperCase()
-    .substring(0, 2);
+  // Get user initials from username if full name is not available
+  const userInitials = user.username
+    ? user.username.substring(0, 2).toUpperCase()
+    : 'SF';
 
   return (
     <header className="bg-white shadow-md">
@@ -49,19 +46,29 @@ export function Header() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8 bg-accent">
-                  <AvatarFallback className="text-white text-sm font-semibold">
-                    {userInitials}
-                  </AvatarFallback>
+                  {user.profileImageUrl ? (
+                    <AvatarImage src={user.profileImageUrl} alt={user.username || 'User'} />
+                  ) : (
+                    <AvatarFallback className="text-white text-sm font-semibold">
+                      {userInitials}
+                    </AvatarFallback>
+                  )}
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <div className="flex items-center justify-start gap-2 p-2">
                 <div className="flex flex-col space-y-1 leading-none">
-                  <p className="font-medium text-sm">{user.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {user.email}
+                  <p className="font-medium text-sm">
+                    {user.firstName && user.lastName 
+                      ? `${user.firstName} ${user.lastName}` 
+                      : user.username}
                   </p>
+                  {user.email && (
+                    <p className="text-xs text-muted-foreground">
+                      {user.email}
+                    </p>
+                  )}
                 </div>
               </div>
               <DropdownMenuSeparator />
