@@ -107,16 +107,75 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
-    passport.authenticate(`replitauth:${req.hostname}`, {
-      prompt: "login consent",
-      scope: ["openid", "email", "profile", "offline_access"],
-    })(req, res, next);
+    console.log('Login request received, hostname:', req.hostname);
+    try {
+      // Instead of using the passport.authenticate function directly,
+      // let's build the authorization URL manually
+      const strategyName = `replitauth:${req.hostname}`;
+      
+      // Access private property with type assertion
+      const passportAny = passport as any;
+      const strategies = passportAny._strategies || {};
+      const passportStrategy = strategies[strategyName];
+      
+      if (!passportStrategy) {
+        console.error(`Strategy ${strategyName} not found in passport!`);
+        console.log('Available strategies:', Object.keys(strategies));
+        return res.status(500).json({ error: 'Authentication strategy not found' });
+      }
+      
+      // Get the authorization URL
+      const authUrl = passportStrategy.client.authorizationUrl({
+        scope: 'openid email profile offline_access',
+        prompt: 'login consent',
+        redirect_uri: `https://${req.hostname}/api/callback`,
+        client_id: process.env.REPL_ID!,
+      });
+      
+      console.log('Redirecting to auth URL:', authUrl);
+      return res.redirect(authUrl);
+    } catch (error) {
+      console.error('Error in /api/login route:', error);
+      return res.status(500).json({ error: 'Internal server error during login' });
+    }
   });
 
   app.get("/api/callback", (req, res, next) => {
+    console.log('Callback received:', req.url);
+    
+    // Log query parameters but sanitize sensitive information
+    const queryParams = Object.keys(req.query);
+    console.log('Query parameters:', queryParams);
+    
+    if (req.query.error) {
+      console.error('Auth error:', req.query.error);
+      console.error('Error description:', req.query.error_description);
+    }
+    
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
+    }, (err, user, info) => {
+      if (err) {
+        console.error('Authentication error:', err);
+        return res.redirect('/auth?error=auth_error');
+      }
+      
+      if (!user) {
+        console.error('Authentication failed:', info);
+        return res.redirect('/auth?error=no_user');
+      }
+      
+      // User successfully authenticated, log them in
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          console.error('Login error:', loginErr);
+          return res.redirect('/auth?error=login_error');
+        }
+        
+        console.log('User successfully authenticated:', user.id);
+        return res.redirect('/');
+      });
     })(req, res, next);
   });
 
