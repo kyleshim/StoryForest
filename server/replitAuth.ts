@@ -46,8 +46,9 @@ export async function setupAuth(app: Express) {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: false, // Set to false for development
       maxAge: sessionTtl,
+      sameSite: 'lax'
     },
   }));
   
@@ -96,7 +97,7 @@ export async function setupAuth(app: Express) {
         name: `replitauth:${domain}`,
         config,
         scope: "openid email profile offline_access",
-        callbackURL: `https://${domain}/api/callback`,
+        callbackURL: `http://${domain}/api/callback`,
       },
       verify,
     );
@@ -108,36 +109,12 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/login", (req, res, next) => {
     console.log('Login request received, hostname:', req.hostname);
-    try {
-      // Instead of using the passport.authenticate function directly,
-      // let's build the authorization URL manually
-      const strategyName = `replitauth:${req.hostname}`;
-      
-      // Access private property with type assertion
-      const passportAny = passport as any;
-      const strategies = passportAny._strategies || {};
-      const passportStrategy = strategies[strategyName];
-      
-      if (!passportStrategy) {
-        console.error(`Strategy ${strategyName} not found in passport!`);
-        console.log('Available strategies:', Object.keys(strategies));
-        return res.status(500).json({ error: 'Authentication strategy not found' });
-      }
-      
-      // Get the authorization URL
-      const authUrl = passportStrategy.client.authorizationUrl({
-        scope: 'openid email profile offline_access',
-        prompt: 'login consent',
-        redirect_uri: `https://${req.hostname}/api/callback`,
-        client_id: process.env.REPL_ID!,
-      });
-      
-      console.log('Redirecting to auth URL:', authUrl);
-      return res.redirect(authUrl);
-    } catch (error) {
-      console.error('Error in /api/login route:', error);
-      return res.status(500).json({ error: 'Internal server error during login' });
-    }
+    
+    // Use standard passport authenticate with redirect
+    passport.authenticate(`replitauth:${req.hostname}`, {
+      scope: ["openid", "email", "profile", "offline_access"],
+      prompt: "login consent"
+    })(req, res, next);
   });
 
   app.get("/api/callback", (req, res, next) => {
@@ -184,7 +161,7 @@ export async function setupAuth(app: Express) {
       res.redirect(
         client.buildEndSessionUrl(config, {
           client_id: process.env.REPL_ID!,
-          post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
+          post_logout_redirect_uri: `http://${req.hostname}`,
         }).href
       );
     });
