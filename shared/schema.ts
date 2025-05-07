@@ -83,7 +83,7 @@ export const loginUserSchema = z.object({
   password: z.string()
 });
 
-// Schema for upsert operations with local auth (no password)
+// Schema for upsert operations with local auth (including password)
 export const upsertUserSchema = createInsertSchema(users).pick({
   id: true,
   username: true,
@@ -93,7 +93,8 @@ export const upsertUserSchema = createInsertSchema(users).pick({
   bio: true,
   profileImageUrl: true,
   isPublic: true,
-});
+  password: true, // Include password field to avoid type errors
+}).partial({ password: true }); // Make password optional for updates
 
 export const insertChildSchema = createInsertSchema(children).pick({
   name: true,
