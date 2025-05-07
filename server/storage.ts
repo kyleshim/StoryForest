@@ -15,14 +15,14 @@ const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   // User methods
-  getUser(id: string): Promise<User | undefined>;
+  getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   
   // Child methods
   getChild(id: number): Promise<Child | undefined>;
-  getChildrenByUserId(userId: string): Promise<Child[]>;
+  getChildrenByUserId(userId: number): Promise<Child[]>;
   getChildWithStats(id: number): Promise<ChildWithStats | undefined>;
   createChild(child: InsertChild): Promise<Child>;
   
@@ -44,7 +44,7 @@ export interface IStorage {
   
   // Discovery methods
   getPublicChildren(): Promise<ChildWithStats[]>;
-  getPublicChildrenByUserId(userId: string): Promise<ChildWithStats[]>;
+  getPublicChildrenByUserId(userId: number): Promise<ChildWithStats[]>;
   searchPublicUsers(query: string): Promise<User[]>;
   
   // Session store
@@ -64,7 +64,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // User methods
-  async getUser(id: string): Promise<User | undefined> {
+  async getUser(id: number): Promise<User | undefined> {
     try {
       const [user] = await db.select().from(users).where(eq(users.id, id));
       return user;
@@ -98,16 +98,10 @@ export class DatabaseStorage implements IStorage {
     try {
       const [user] = await db
         .insert(users)
-        .values({ 
-          ...userData,
-          updatedAt: new Date() 
-        })
+        .values(userData)
         .onConflictDoUpdate({
           target: users.id,
-          set: {
-            ...userData,
-            updatedAt: new Date(),
-          },
+          set: userData
         })
         .returning();
       return user;
@@ -128,7 +122,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getChildrenByUserId(userId: string): Promise<Child[]> {
+  async getChildrenByUserId(userId: number): Promise<Child[]> {
     try {
       const result = await db.select().from(children).where(eq(children.userId, userId));
       return result;
@@ -396,7 +390,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getPublicChildrenByUserId(userId: string): Promise<ChildWithStats[]> {
+  async getPublicChildrenByUserId(userId: number): Promise<ChildWithStats[]> {
     try {
       const user = await this.getUser(userId);
       if (!user || !user.isPublic) return [];

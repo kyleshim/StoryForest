@@ -1,12 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { 
   insertChildSchema,
   insertBookSchema,
   insertLibraryBookSchema, 
-  insertWishlistBookSchema
+  insertWishlistBookSchema,
+  registerUserSchema,
+  loginUserSchema
 } from "@shared/schema";
 import { z } from "zod";
 import axios from "axios";
@@ -16,9 +18,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
   
   // User routes
-  app.get("/api/user", isAuthenticated, async (req: any, res) => {
+  app.get("/api/user", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -318,8 +322,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users/:id/children", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
     
-    const userId = req.params.id;
-    if (!userId) return res.status(400).send("Invalid user ID");
+    const userId = parseInt(req.params.id);
+    if (isNaN(userId)) return res.status(400).send("Invalid user ID");
     
     const publicChildren = await storage.getPublicChildrenByUserId(userId);
     res.json(publicChildren);
