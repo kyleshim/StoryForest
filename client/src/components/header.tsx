@@ -12,11 +12,11 @@ import {
 import { useLocation } from 'wouter';
 
 export function Header() {
-  const { user, logoutMutation } = useAuth();
+  const { user, signOut } = useAuth();
   const [, navigate] = useLocation();
 
   const handleLogout = () => {
-    logoutMutation.mutate();
+    signOut();
   };
 
   if (!user) return null;
