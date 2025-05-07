@@ -7,62 +7,39 @@ import {
 import { User as SelectUser, LoginUser, RegisterUser } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useUser, useClerk } from "@clerk/clerk-react";
 
 type AuthContextType = {
   user: SelectUser | null;
   isLoading: boolean;
   error: Error | null;
-  loginMutation: UseMutationResult<SelectUser, Error, LoginUser>;
-  registerMutation: UseMutationResult<SelectUser, Error, RegisterUser>;
   logoutMutation: UseMutationResult<void, Error, void>;
   updatePrivacyMutation: UseMutationResult<SelectUser, Error, {isPublic: boolean}>;
-  login: () => void;
+
 };
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
-  const {
-    data: user,
-    error,
-    isLoading,
-  } = useQuery<SelectUser | undefined, Error>({
-    queryKey: ["/api/user"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-  });
+  const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
 
-  // Legacy function to initiate login with Replit (keeping for compatibility)
-  const login = () => {
-    window.location.href = '/api/login';
-  };
+  // Map Clerk user to our app's user format
+  const mappedUser: SelectUser | null = user ? {
+    id: user.id,
+    username: user.username || '',
+    firstName: user.firstName || '',
+    email: user.emailAddresses[0]?.emailAddress || '',
+    isPublic: true, // Default value since Clerk doesn't have this concept
+    createdAt: new Date(user.createdAt),
+    updatedAt: new Date(user.createdAt)
+  } : null;
 
-  // Login mutation for local authentication
-  const loginMutation = useMutation({
-    mutationFn: async (loginData: LoginUser) => {
-      const res = await apiRequest("POST", "/api/login", loginData);
-      return await res.json();
-    },
-    onSuccess: (userData: SelectUser) => {
-      queryClient.setQueryData(["/api/user"], userData);
-    },
-  });
 
-  // Register mutation for local authentication
-  const registerMutation = useMutation({
-    mutationFn: async (registerData: RegisterUser) => {
-      const res = await apiRequest("POST", "/api/register", registerData);
-      return await res.json();
-    },
-    onSuccess: (userData: SelectUser) => {
-      queryClient.setQueryData(["/api/user"], userData);
-    },
-  });
-
-  // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/logout");
+      await signOut();
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
@@ -106,12 +83,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user: user ?? null,
-        isLoading,
-        error,
-        login,
-        loginMutation,
-        registerMutation,
+        user: mappedUser,
+        isLoading: !isLoaded,
+        error: null,
         logoutMutation,
         updatePrivacyMutation,
       }}
