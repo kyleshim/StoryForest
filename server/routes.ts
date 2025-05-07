@@ -17,22 +17,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
   setupAuth(app);
   
-  // User routes
-  app.get("/api/user", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
-    
-    try {
-      const userId = req.user!.id;
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
+  // Additional API routes (auth.ts already handles basic auth routes)
   
   app.patch("/api/user/privacy", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");

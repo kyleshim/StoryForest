@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,12 +8,61 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+// Validation schemas
+const loginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+const registerSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
+type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
-  const { user, login, isLoading } = useAuth();
+  const { user, loginMutation, registerMutation, isLoading } = useAuth();
   const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<string>("login");
+  
+  // Login form
+  const loginForm = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+    },
+  });
+
+  // Register form
+  const registerForm = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      username: "",
+      email: "",
+      password: "",
+      firstName: "",
+      lastName: "",
+    },
+  });
 
   // Redirect if already logged in
   useEffect(() => {
@@ -21,6 +70,36 @@ export default function AuthPage() {
       navigate("/");
     }
   }, [user, navigate]);
+
+  // Handle login submission
+  const onLoginSubmit = async (data: LoginFormData) => {
+    try {
+      await loginMutation.mutateAsync(data);
+    } catch (error) {
+      toast({
+        title: "Login Failed",
+        description: "Please check your username and password",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle register submission
+  const onRegisterSubmit = async (data: RegisterFormData) => {
+    try {
+      await registerMutation.mutateAsync(data);
+      toast({
+        title: "Registration Successful",
+        description: "Your account has been created",
+      });
+    } catch (error) {
+      toast({
+        title: "Registration Failed",
+        description: "This username may already be taken",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -100,30 +179,160 @@ export default function AuthPage() {
             <CardHeader>
               <CardTitle className="font-heading">Welcome to Story Forest</CardTitle>
               <CardDescription>
-                Log in to start your reading journey
+                {activeTab === "login" ? "Log in to continue your reading journey" : "Create an account to start your reading journey"}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-center mb-4">
-                Story Forest helps parents track their children's reading journey and discover new books.
-              </p>
-              
-              <Button 
-                onClick={login}
-                className="w-full flex items-center justify-center gap-2"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Sign in with Replit
-              </Button>
-              
-              <p className="text-xs text-center text-muted-foreground mt-4">
+            <CardContent>
+              <Tabs defaultValue="login" onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="login">Login</TabsTrigger>
+                  <TabsTrigger value="register">Register</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="login">
+                  <Form {...loginForm}>
+                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                      <FormField
+                        control={loginForm.control}
+                        name="username"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Username</FormLabel>
+                            <FormControl>
+                              <Input placeholder="johndoe" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={loginForm.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Password</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="••••••••" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full"
+                        disabled={loginMutation.isPending}
+                      >
+                        {loginMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Logging in...
+                          </>
+                        ) : "Login"}
+                      </Button>
+                    </form>
+                  </Form>
+                </TabsContent>
+                
+                <TabsContent value="register">
+                  <Form {...registerForm}>
+                    <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={registerForm.control}
+                          name="firstName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>First Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="John" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={registerForm.control}
+                          name="lastName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Last Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Doe" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <FormField
+                        control={registerForm.control}
+                        name="username"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Username</FormLabel>
+                            <FormControl>
+                              <Input placeholder="johndoe" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={registerForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input type="email" placeholder="john.doe@example.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={registerForm.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Password</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="••••••••" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full"
+                        disabled={registerMutation.isPending}
+                      >
+                        {registerMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Creating account...
+                          </>
+                        ) : "Create Account"}
+                      </Button>
+                    </form>
+                  </Form>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+            <CardFooter>
+              <p className="text-xs text-center text-muted-foreground w-full">
                 By signing in, you agree to our Terms of Service and Privacy Policy.
               </p>
-            </CardContent>
+            </CardFooter>
           </Card>
         </div>
       </div>

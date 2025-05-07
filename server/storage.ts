@@ -96,15 +96,32 @@ export class DatabaseStorage implements IStorage {
   
   async upsertUser(userData: UpsertUser): Promise<User> {
     try {
-      const [user] = await db
-        .insert(users)
-        .values(userData)
-        .onConflictDoUpdate({
-          target: users.id,
-          set: userData
-        })
-        .returning();
-      return user;
+      // For upsert, we need to ensure password exists but UpsertUser type doesn't include it
+      // So we get the existing user data to maintain the password
+      if (userData.id) {
+        const existingUser = await this.getUser(userData.id);
+        if (existingUser) {
+          // Insert with correct fields
+          const [user] = await db
+            .insert(users)
+            .values({
+              ...userData,
+              password: existingUser.password // Preserve the existing password
+            })
+            .onConflictDoUpdate({
+              target: users.id,
+              set: {
+                ...userData,
+                password: existingUser.password // Preserve the existing password
+              }
+            })
+            .returning();
+          return user;
+        }
+      }
+      
+      // This shouldn't happen as we're updating an existing user
+      throw new Error("Cannot update non-existent user");
     } catch (error) {
       console.error("Error upserting user:", error);
       throw error;
