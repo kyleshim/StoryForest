@@ -1,31 +1,19 @@
-import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
-import { Express } from "express";
+import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
-import { promisify } from "util";
 import { storage } from "./storage";
-import { User as SelectUser } from "@shared/schema";
+import { InsertUserPreferences } from "@shared/schema";
+import { ClerkExpressRequireAuth, clerkClient } from '@clerk/clerk-sdk-node';
 
 declare global {
   namespace Express {
-    interface User extends SelectUser {}
+    interface Request {
+      auth?: {
+        userId: string | null;
+        sessionId: string | null;
+        getToken: () => Promise<string | null>;
+      }
+    }
   }
-}
-
-const scryptAsync = promisify(scrypt);
-
-async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${buf.toString("hex")}.${salt}`;
-}
-
-async function comparePasswords(supplied: string, stored: string) {
-  const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
 export function setupAuth(app: Express) {
@@ -41,71 +29,109 @@ export function setupAuth(app: Express) {
 
   app.set("trust proxy", 1);
   app.use(session(sessionSettings));
-  app.use(passport.initialize());
-  app.use(passport.session());
-
-  passport.use(
-    new LocalStrategy(async (username, password, done) => {
-      const user = await storage.getUserByUsername(username);
-      if (!user || !(await comparePasswords(password, user.password))) {
-        return done(null, false);
+  
+  // Use Clerk's middleware to require auth for API routes
+  app.use("/api", ClerkExpressRequireAuth({}));
+  
+  // Create or update user preferences when a user profile is updated
+  app.post("/api/webhook/clerk", async (req, res) => {
+    // This should be properly secured with webhook signatures in production
+    try {
+      const evt = req.body;
+      
+      // Handle user creation or update
+      if (evt.type === 'user.created' || evt.type === 'user.updated') {
+        const clerkId = evt.data.id;
+        const isPublic = true; // Default
+        
+        // Create or update user preferences
+        await storage.updateUserPreferences({
+          clerkId,
+          isPublic
+        });
+        
+        res.status(200).json({ success: true });
       } else {
-        return done(null, user);
+        res.status(200).json({ received: true });
       }
-    }),
-  );
-
-  passport.serializeUser((user, done) => done(null, user.id));
-  passport.deserializeUser(async (id: number, done) => {
-    const user = await storage.getUser(id);
-    done(null, user);
-  });
-
-  app.post("/api/register", async (req, res, next) => {
-    const existingUser = await storage.getUserByUsername(req.body.username);
-    if (existingUser) {
-      return res.status(400).send("Username already exists");
+    } catch (error) {
+      console.error('Error processing webhook:', error);
+      res.status(500).json({ error: 'Webhook processing failed' });
     }
-
-    const user = await storage.createUser({
-      ...req.body,
-      password: await hashPassword(req.body.password),
-    });
-
-    req.login(user, (err) => {
-      if (err) return next(err);
-      res.status(201).json(user);
-    });
   });
-
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    res.status(200).json(req.user);
-  });
-
-  app.post("/api/logout", (req, res, next) => {
-    req.logout((err) => {
-      if (err) return next(err);
-      res.sendStatus(200);
-    });
-  });
-
-  app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    res.json(req.user);
-  });
-
+  
+  // Update privacy settings
   app.put("/api/user/privacy", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized" });
     
-    const user = await storage.getUser(req.user!.id);
-    if (!user) return res.status(404).send("User not found");
-    
+    const clerkId = req.auth.userId;
     const isPublic = req.body.isPublic;
+    
     if (typeof isPublic !== 'boolean') {
-      return res.status(400).send("Invalid privacy setting");
+      return res.status(400).json({ error: "Invalid privacy setting" });
     }
     
-    user.isPublic = isPublic;
-    res.json(user);
+    try {
+      const updatedPrefs = await storage.updateUserPreferences({
+        clerkId,
+        isPublic
+      });
+      
+      res.json({ success: true, isPublic: updatedPrefs.isPublic });
+    } catch (error) {
+      console.error('Error updating privacy settings:', error);
+      res.status(500).json({ error: 'Failed to update privacy settings' });
+    }
+  });
+  
+  // Helper middleware to ensure user preferences exist
+  app.use("/api", async (req, res, next) => {
+    try {
+      if (req.auth?.userId) {
+        // Check if user has preferences, create if not
+        const prefs = await storage.getUserPreferences(req.auth.userId);
+        
+        if (!prefs) {
+          // Create default preferences for this user
+          await storage.createUserPreferences({
+            clerkId: req.auth.userId,
+            isPublic: true // Default to public
+          });
+        }
+      }
+      next();
+    } catch (error) {
+      console.error("Error in user preferences middleware:", error);
+      next();
+    }
+  });
+  
+  // Get current user information
+  app.get("/api/user", async (req, res) => {
+    if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized" });
+    
+    try {
+      const clerkId = req.auth.userId;
+      
+      // Get user from Clerk
+      const user = await clerkClient.users.getUser(clerkId);
+      
+      // Get user preferences from our DB
+      const prefs = await storage.getUserPreferences(clerkId);
+      
+      res.json({
+        id: user.id,
+        username: user.username || user.id.substring(0, 8),
+        firstName: user.firstName,
+        email: user.emailAddresses[0]?.emailAddress,
+        profileImageUrl: user.imageUrl,
+        isPublic: prefs?.isPublic ?? true,
+        createdAt: user.createdAt,
+        updatedAt: new Date()
+      });
+    } catch (error) {
+      console.error("Error getting user:", error);
+      res.status(500).json({ error: "Failed to get user information" });
+    }
   });
 }

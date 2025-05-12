@@ -13,16 +13,10 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User model updated for local authentication
-export const users = pgTable("users", {
+// User preferences (for Clerk users)
+export const userPreferences = pgTable("user_preferences", {
   id: serial("id").primaryKey(),
-  username: varchar("username", { length: 64 }).notNull().unique(),
-  email: varchar("email", { length: 255 }),
-  password: varchar("password", { length: 255 }).notNull(),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  bio: text("bio"),
-  profileImageUrl: varchar("profile_image_url"),
+  clerkId: varchar("clerk_id", { length: 64 }).notNull().unique(),
   isPublic: boolean("is_public").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -32,7 +26,7 @@ export const children = pgTable("children", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   age: integer("age").notNull(),
-  userId: integer("user_id").notNull(),
+  clerkId: varchar("clerk_id", { length: 64 }).notNull(),
 });
 
 export const books = pgTable("books", {
@@ -61,45 +55,21 @@ export const wishlistBooks = pgTable("wishlist_books", {
 });
 
 // Insert Schemas
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  email: true,
-  password: true,
-  firstName: true,
-  lastName: true,
-  bio: true,
-  profileImageUrl: true,
+export const insertUserPreferencesSchema = createInsertSchema(userPreferences).pick({
+  clerkId: true,
   isPublic: true,
 });
 
-// Schema for registration
-export const registerUserSchema = insertUserSchema.extend({
-  password: z.string().min(8, "Password must be at least 8 characters")
-});
-
-// Schema for login
-export const loginUserSchema = z.object({
-  username: z.string(),
-  password: z.string()
-});
-
-// Schema for upsert operations with local auth (including password)
-export const upsertUserSchema = createInsertSchema(users).pick({
+export const upsertUserPreferencesSchema = createInsertSchema(userPreferences).pick({
   id: true,
-  username: true,
-  email: true,
-  firstName: true,
-  lastName: true,
-  bio: true,
-  profileImageUrl: true,
+  clerkId: true,
   isPublic: true,
-  password: true, // Include password field to avoid type errors
-}).partial({ password: true }); // Make password optional for updates
+});
 
 export const insertChildSchema = createInsertSchema(children).pick({
   name: true,
   age: true,
-  userId: true,
+  clerkId: true,
 });
 
 export const insertBookSchema = createInsertSchema(books).pick({
@@ -123,11 +93,22 @@ export const insertWishlistBookSchema = createInsertSchema(wishlistBooks).pick({
 });
 
 // Types
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type RegisterUser = z.infer<typeof registerUserSchema>;
-export type LoginUser = z.infer<typeof loginUserSchema>;
-export type UpsertUser = z.infer<typeof upsertUserSchema>;
-export type User = typeof users.$inferSelect;
+export type InsertUserPreferences = z.infer<typeof insertUserPreferencesSchema>;
+export type UpsertUserPreferences = z.infer<typeof upsertUserPreferencesSchema>;
+export type UserPreferences = typeof userPreferences.$inferSelect;
+
+// Interface for Clerk user data mapped to our app
+export interface User {
+  id: string; // Clerk user ID
+  username: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  profileImageUrl?: string;
+  isPublic: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export type InsertChild = z.infer<typeof insertChildSchema>;
 export type Child = typeof children.$inferSelect;

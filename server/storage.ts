@@ -1,10 +1,10 @@
 import { 
-  User, InsertUser, UpsertUser,
+  User, InsertUserPreferences, UpsertUserPreferences, UserPreferences,
   Child, InsertChild, ChildWithStats,
   Book, InsertBook, BookWithDetails,
   LibraryBook, InsertLibraryBook,
   WishlistBook, InsertWishlistBook,
-  users, children, books, libraryBooks, wishlistBooks
+  userPreferences, children, books, libraryBooks, wishlistBooks
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
@@ -14,15 +14,14 @@ import connectPg from "connect-pg-simple";
 const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
-  // User methods
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  // User preferences methods
+  getUserPreferences(clerkId: string): Promise<UserPreferences | undefined>;
+  createUserPreferences(prefs: InsertUserPreferences): Promise<UserPreferences>;
+  updateUserPreferences(prefs: UpsertUserPreferences): Promise<UserPreferences>;
   
   // Child methods
   getChild(id: number): Promise<Child | undefined>;
-  getChildrenByUserId(userId: number): Promise<Child[]>;
+  getChildrenByClerkId(clerkId: string): Promise<Child[]>;
   getChildWithStats(id: number): Promise<ChildWithStats | undefined>;
   createChild(child: InsertChild): Promise<Child>;
   
@@ -44,8 +43,7 @@ export interface IStorage {
   
   // Discovery methods
   getPublicChildren(): Promise<ChildWithStats[]>;
-  getPublicChildrenByUserId(userId: number): Promise<ChildWithStats[]>;
-  searchPublicUsers(query: string): Promise<User[]>;
+  getPublicChildrenByClerkId(clerkId: string): Promise<ChildWithStats[]>;
   
   // Session store
   sessionStore: session.Store;
@@ -63,67 +61,46 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  // User methods
-  async getUser(id: number): Promise<User | undefined> {
+  // User preferences methods
+  async getUserPreferences(clerkId: string): Promise<UserPreferences | undefined> {
     try {
-      const [user] = await db.select().from(users).where(eq(users.id, id));
-      return user;
+      const [prefs] = await db.select().from(userPreferences).where(eq(userPreferences.clerkId, clerkId));
+      return prefs;
     } catch (error) {
-      console.error("Error getting user:", error);
+      console.error("Error getting user preferences:", error);
       return undefined;
     }
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
+  async createUserPreferences(prefs: InsertUserPreferences): Promise<UserPreferences> {
     try {
-      const [user] = await db.select().from(users).where(eq(users.username, username));
-      return user;
+      const [newPrefs] = await db.insert(userPreferences).values(prefs).returning();
+      return newPrefs;
     } catch (error) {
-      console.error("Error getting user by username:", error);
-      return undefined;
-    }
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    try {
-      const [user] = await db.insert(users).values(insertUser).returning();
-      return user;
-    } catch (error) {
-      console.error("Error creating user:", error);
+      console.error("Error creating user preferences:", error);
       throw error;
     }
   }
-  
-  async upsertUser(userData: UpsertUser): Promise<User> {
+
+  async updateUserPreferences(prefs: UpsertUserPreferences): Promise<UserPreferences> {
     try {
-      // For upsert, we need to ensure password exists but UpsertUser type doesn't include it
-      // So we get the existing user data to maintain the password
-      if (userData.id) {
-        const existingUser = await this.getUser(userData.id);
-        if (existingUser) {
-          // Insert with correct fields
-          const [user] = await db
-            .insert(users)
-            .values({
-              ...userData,
-              password: existingUser.password // Preserve the existing password
-            })
-            .onConflictDoUpdate({
-              target: users.id,
-              set: {
-                ...userData,
-                password: existingUser.password // Preserve the existing password
-              }
-            })
-            .returning();
-          return user;
-        }
-      }
+      // Check if preferences exist for this clerk user
+      const existingPrefs = await this.getUserPreferences(prefs.clerkId);
       
-      // This shouldn't happen as we're updating an existing user
-      throw new Error("Cannot update non-existent user");
+      if (existingPrefs) {
+        // Update existing preferences
+        const [updatedPrefs] = await db
+          .update(userPreferences)
+          .set(prefs)
+          .where(eq(userPreferences.clerkId, prefs.clerkId))
+          .returning();
+        return updatedPrefs;
+      } else {
+        // Create new preferences
+        return this.createUserPreferences(prefs);
+      }
     } catch (error) {
-      console.error("Error upserting user:", error);
+      console.error("Error updating user preferences:", error);
       throw error;
     }
   }
@@ -139,12 +116,12 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getChildrenByUserId(userId: number): Promise<Child[]> {
+  async getChildrenByClerkId(clerkId: string): Promise<Child[]> {
     try {
-      const result = await db.select().from(children).where(eq(children.userId, userId));
+      const result = await db.select().from(children).where(eq(children.clerkId, clerkId));
       return result;
     } catch (error) {
-      console.error("Error getting children by user ID:", error);
+      console.error("Error getting children by Clerk ID:", error);
       return [];
     }
   }
@@ -386,17 +363,17 @@ export class DatabaseStorage implements IStorage {
   // Discovery methods
   async getPublicChildren(): Promise<ChildWithStats[]> {
     try {
-      // Get public users
-      const publicUsers = await db
+      // Get all preferences for users that are public
+      const publicUserPrefs = await db
         .select()
-        .from(users)
-        .where(eq(users.isPublic, true));
+        .from(userPreferences)
+        .where(eq(userPreferences.isPublic, true));
         
       const result: ChildWithStats[] = [];
       
       // Get children for each public user
-      for (const user of publicUsers) {
-        const childrenWithStats = await this.getPublicChildrenByUserId(user.id);
+      for (const pref of publicUserPrefs) {
+        const childrenWithStats = await this.getPublicChildrenByClerkId(pref.clerkId);
         result.push(...childrenWithStats);
       }
       
@@ -407,15 +384,15 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getPublicChildrenByUserId(userId: number): Promise<ChildWithStats[]> {
+  async getPublicChildrenByClerkId(clerkId: string): Promise<ChildWithStats[]> {
     try {
-      const user = await this.getUser(userId);
-      if (!user || !user.isPublic) return [];
+      const prefs = await this.getUserPreferences(clerkId);
+      if (!prefs || !prefs.isPublic) return [];
 
-      const children = await this.getChildrenByUserId(userId);
+      const userChildren = await this.getChildrenByClerkId(clerkId);
       const result: ChildWithStats[] = [];
 
-      for (const child of children) {
+      for (const child of userChildren) {
         const childWithStats = await this.getChildWithStats(child.id);
         if (childWithStats) {
           result.push(childWithStats);
@@ -424,29 +401,7 @@ export class DatabaseStorage implements IStorage {
 
       return result;
     } catch (error) {
-      console.error("Error getting public children by user ID:", error);
-      return [];
-    }
-  }
-
-  async searchPublicUsers(query: string): Promise<User[]> {
-    try {
-      if (!query) return [];
-      
-      const lowercaseQuery = query.toLowerCase();
-      
-      // Search for public users whose username contains the query
-      const results = await db
-        .select()
-        .from(users)
-        .where(and(
-          eq(users.isPublic, true),
-          sql`LOWER(${users.username}) LIKE ${`%${lowercaseQuery}%`}`
-        ));
-        
-      return results;
-    } catch (error) {
-      console.error("Error searching public users:", error);
+      console.error("Error getting public children by Clerk ID:", error);
       return [];
     }
   }

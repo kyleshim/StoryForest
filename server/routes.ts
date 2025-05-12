@@ -6,9 +6,7 @@ import {
   insertChildSchema,
   insertBookSchema,
   insertLibraryBookSchema, 
-  insertWishlistBookSchema,
-  registerUserSchema,
-  loginUserSchema
+  insertWishlistBookSchema
 } from "@shared/schema";
 import { z } from "zod";
 import axios from "axios";
@@ -17,34 +15,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
   setupAuth(app);
   
-  // Additional API routes (auth.ts already handles basic auth routes)
-  
-  app.patch("/api/user/privacy", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
-    
-    try {
-      const isPublic = req.body.isPublic;
-      if (typeof isPublic !== 'boolean') {
-        return res.status(400).json({ error: "isPublic must be a boolean" });
-      }
-      
-      const updatedUser = await storage.upsertUser({
-        ...req.user,
-        isPublic
-      });
-      
-      res.json(updatedUser);
-    } catch (error) {
-      console.error("Error updating user privacy settings:", error);
-      res.status(500).send("Failed to update privacy settings");
-    }
-  });
-
   // Child routes
   app.get("/api/children", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized" });
     
-    const children = await storage.getChildrenByUserId(req.user!.id);
+    const children = await storage.getChildrenByClerkId(req.auth.userId);
     const childrenWithStats = await Promise.all(
       children.map(child => storage.getChildWithStats(child.id))
     );
@@ -53,12 +28,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.post("/api/children", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized" });
     
     try {
       const validatedData = insertChildSchema.parse({
         ...req.body,
-        userId: req.user!.id
+        clerkId: req.auth.userId
       });
       
       const child = await storage.createChild(validatedData);
@@ -69,24 +44,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
-      res.status(500).send("Server error");
+      res.status(500).json({ error: "Server error" });
     }
   });
   
   app.get("/api/children/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized" });
     
     const childId = parseInt(req.params.id);
-    if (isNaN(childId)) return res.status(400).send("Invalid child ID");
+    if (isNaN(childId)) return res.status(400).json({ error: "Invalid child ID" });
     
     const child = await storage.getChild(childId);
-    if (!child) return res.status(404).send("Child not found");
+    if (!child) return res.status(404).json({ error: "Child not found" });
     
     // Check if the child belongs to the requesting user
-    if (child.userId !== req.user!.id) {
-      const childOwner = await storage.getUser(child.userId);
-      if (!childOwner || !childOwner.isPublic) {
-        return res.status(403).send("Access denied");
+    if (child.clerkId !== req.auth.userId) {
+      const prefs = await storage.getUserPreferences(child.clerkId);
+      if (!prefs || !prefs.isPublic) {
+        return res.status(403).json({ error: "Access denied" });
       }
     }
     
@@ -96,19 +71,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Library routes
   app.get("/api/children/:id/library", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized" });
     
     const childId = parseInt(req.params.id);
-    if (isNaN(childId)) return res.status(400).send("Invalid child ID");
+    if (isNaN(childId)) return res.status(400).json({ error: "Invalid child ID" });
     
     const child = await storage.getChild(childId);
-    if (!child) return res.status(404).send("Child not found");
+    if (!child) return res.status(404).json({ error: "Child not found" });
     
     // Check if the child belongs to the requesting user or is public
-    if (child.userId !== req.user!.id) {
-      const childOwner = await storage.getUser(child.userId);
-      if (!childOwner || !childOwner.isPublic) {
-        return res.status(403).send("Access denied");
+    if (child.clerkId !== req.auth.userId) {
+      const prefs = await storage.getUserPreferences(child.clerkId);
+      if (!prefs || !prefs.isPublic) {
+        return res.status(403).json({ error: "Access denied" });
       }
     }
     
@@ -117,17 +92,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.post("/api/children/:id/library", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized" });
     
     const childId = parseInt(req.params.id);
-    if (isNaN(childId)) return res.status(400).send("Invalid child ID");
+    if (isNaN(childId)) return res.status(400).json({ error: "Invalid child ID" });
     
     const child = await storage.getChild(childId);
-    if (!child) return res.status(404).send("Child not found");
+    if (!child) return res.status(404).json({ error: "Child not found" });
     
     // Only the owner can add books to the library
-    if (child.userId !== req.user!.id) {
-      return res.status(403).send("Access denied");
+    if (child.clerkId !== req.auth.userId) {
+      return res.status(403).json({ error: "Access denied" });
     }
     
     try {
@@ -152,26 +127,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
-      res.status(500).send("Server error");
+      res.status(500).json({ error: "Server error" });
     }
   });
   
   app.delete("/api/children/:childId/library/:bookId", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized" });
     
     const childId = parseInt(req.params.childId);
     const bookId = parseInt(req.params.bookId);
     
     if (isNaN(childId) || isNaN(bookId)) {
-      return res.status(400).send("Invalid IDs");
+      return res.status(400).json({ error: "Invalid IDs" });
     }
     
     const child = await storage.getChild(childId);
-    if (!child) return res.status(404).send("Child not found");
+    if (!child) return res.status(404).json({ error: "Child not found" });
     
     // Only the owner can remove books from the library
-    if (child.userId !== req.user!.id) {
-      return res.status(403).send("Access denied");
+    if (child.clerkId !== req.auth.userId) {
+      return res.status(403).json({ error: "Access denied" });
     }
     
     await storage.removeBookFromLibrary(childId, bookId);
@@ -179,26 +154,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.post("/api/children/:childId/library/:bookId/rate", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized" });
     
     const childId = parseInt(req.params.childId);
     const bookId = parseInt(req.params.bookId);
     
     if (isNaN(childId) || isNaN(bookId)) {
-      return res.status(400).send("Invalid IDs");
+      return res.status(400).json({ error: "Invalid IDs" });
     }
     
     const child = await storage.getChild(childId);
-    if (!child) return res.status(404).send("Child not found");
+    if (!child) return res.status(404).json({ error: "Child not found" });
     
     // Only the owner can rate books
-    if (child.userId !== req.user!.id) {
-      return res.status(403).send("Access denied");
+    if (child.clerkId !== req.auth.userId) {
+      return res.status(403).json({ error: "Access denied" });
     }
     
     const rating = req.body.rating;
     if (rating !== 'up' && rating !== 'down' && rating !== null) {
-      return res.status(400).send("Invalid rating");
+      return res.status(400).json({ error: "Invalid rating" });
     }
     
     await storage.updateBookRating(childId, bookId, rating);
@@ -207,19 +182,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Wishlist routes
   app.get("/api/children/:id/wishlist", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized" });
     
     const childId = parseInt(req.params.id);
-    if (isNaN(childId)) return res.status(400).send("Invalid child ID");
+    if (isNaN(childId)) return res.status(400).json({ error: "Invalid child ID" });
     
     const child = await storage.getChild(childId);
-    if (!child) return res.status(404).send("Child not found");
+    if (!child) return res.status(404).json({ error: "Child not found" });
     
     // Check if the child belongs to the requesting user or is public
-    if (child.userId !== req.user!.id) {
-      const childOwner = await storage.getUser(child.userId);
-      if (!childOwner || !childOwner.isPublic) {
-        return res.status(403).send("Access denied");
+    if (child.clerkId !== req.auth.userId) {
+      const prefs = await storage.getUserPreferences(child.clerkId);
+      if (!prefs || !prefs.isPublic) {
+        return res.status(403).json({ error: "Access denied" });
       }
     }
     
@@ -228,17 +203,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.post("/api/children/:id/wishlist", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized" });
     
     const childId = parseInt(req.params.id);
-    if (isNaN(childId)) return res.status(400).send("Invalid child ID");
+    if (isNaN(childId)) return res.status(400).json({ error: "Invalid child ID" });
     
     const child = await storage.getChild(childId);
-    if (!child) return res.status(404).send("Child not found");
+    if (!child) return res.status(404).json({ error: "Child not found" });
     
     // Only the owner can add books to the wishlist
-    if (child.userId !== req.user!.id) {
-      return res.status(403).send("Access denied");
+    if (child.clerkId !== req.auth.userId) {
+      return res.status(403).json({ error: "Access denied" });
     }
     
     try {
@@ -262,26 +237,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
-      res.status(500).send("Server error");
+      res.status(500).json({ error: "Server error" });
     }
   });
   
   app.delete("/api/children/:childId/wishlist/:bookId", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized" });
     
     const childId = parseInt(req.params.childId);
     const bookId = parseInt(req.params.bookId);
     
     if (isNaN(childId) || isNaN(bookId)) {
-      return res.status(400).send("Invalid IDs");
+      return res.status(400).json({ error: "Invalid IDs" });
     }
     
     const child = await storage.getChild(childId);
-    if (!child) return res.status(404).send("Child not found");
+    if (!child) return res.status(404).json({ error: "Child not found" });
     
     // Only the owner can remove books from the wishlist
-    if (child.userId !== req.user!.id) {
-      return res.status(403).send("Access denied");
+    if (child.clerkId !== req.auth.userId) {
+      return res.status(403).json({ error: "Access denied" });
     }
     
     await storage.removeBookFromWishlist(childId, bookId);
@@ -290,33 +265,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Discovery routes
   app.get("/api/discover/children", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized" });
     
     const publicChildren = await storage.getPublicChildren();
     res.json(publicChildren);
   });
   
-  app.get("/api/users/search", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+  app.get("/api/users/:clerkId/children", async (req, res) => {
+    if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized" });
     
-    const query = req.query.q as string;
-    const users = await storage.searchPublicUsers(query);
-    res.json(users);
-  });
-  
-  app.get("/api/users/:id/children", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    const clerkId = req.params.clerkId;
+    if (!clerkId) return res.status(400).json({ error: "Invalid user ID" });
     
-    const userId = parseInt(req.params.id);
-    if (isNaN(userId)) return res.status(400).send("Invalid user ID");
-    
-    const publicChildren = await storage.getPublicChildrenByUserId(userId);
+    const publicChildren = await storage.getPublicChildrenByClerkId(clerkId);
     res.json(publicChildren);
   });
   
   // Google Books API integration
   app.get("/api/books/search", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized" });
     
     try {
       const query = req.query.q as string;
@@ -324,7 +291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Book search request:', { query });
       
       if (!query) {
-        return res.status(400).send("Search query is required");
+        return res.status(400).json({ error: "Search query is required" });
       }
       
       let searchQuery = query;
@@ -365,8 +332,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let isbn = '';
         if (volumeInfo.industryIdentifiers && volumeInfo.industryIdentifiers.length > 0) {
           const isbnObj = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_13') || 
-                          volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10') ||
-                          volumeInfo.industryIdentifiers[0];
+                        volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10') ||
+                        volumeInfo.industryIdentifiers[0];
           isbn = isbnObj.identifier;
         }
         
@@ -386,19 +353,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(books);
     } catch (error) {
       console.error('Google Books API error:', error);
-      res.status(500).send("Failed to search books");
+      res.status(500).json({ error: "Failed to search books" });
     }
   });
   
   // Get book details by Google Books ID
   app.get("/api/books/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized" });
     
     try {
       const bookId = req.params.id;
       
       if (!bookId) {
-        return res.status(400).send("Book ID is required");
+        return res.status(400).json({ error: "Book ID is required" });
       }
       
       const response = await axios.get(`https://www.googleapis.com/books/v1/volumes/${bookId}`);
@@ -419,8 +386,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let isbn = '';
       if (volumeInfo.industryIdentifiers && volumeInfo.industryIdentifiers.length > 0) {
         const isbnObj = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_13') || 
-                        volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10') ||
-                        volumeInfo.industryIdentifiers[0];
+                      volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10') ||
+                      volumeInfo.industryIdentifiers[0];
         isbn = isbnObj.identifier;
       }
       
@@ -442,7 +409,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(book);
     } catch (error) {
       console.error('Google Books API error:', error);
-      res.status(500).send("Failed to get book details");
+      res.status(500).json({ error: "Failed to get book details" });
     }
   });
 
