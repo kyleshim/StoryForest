@@ -25,7 +25,8 @@ export const userPreferences = pgTable("user_preferences", {
 export const children = pgTable("children", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  age: integer("age").notNull(),
+  birthMonth: integer("birth_month").notNull(), // Month (1-12)
+  birthYear: integer("birth_year").notNull(), // Year (e.g., 2020)
   clerkId: varchar("clerk_id", { length: 64 }).notNull(),
 });
 
@@ -68,7 +69,8 @@ export const upsertUserPreferencesSchema = createInsertSchema(userPreferences).p
 
 export const insertChildSchema = createInsertSchema(children).pick({
   name: true,
-  age: true,
+  birthMonth: true,
+  birthYear: true,
   clerkId: true,
 });
 
