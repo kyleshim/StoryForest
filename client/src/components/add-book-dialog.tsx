@@ -52,9 +52,48 @@ export function AddBookDialog({ childId, childAge = 3, onAddBook, trigger }: Add
       });
     },
   });
+  
+  // Add to wishlist mutation
+  const addToWishlistMutation = useMutation({
+    mutationFn: async (book: BookSearchResult) => {
+      const response = await apiRequest('POST', `/api/children/${childId}/wishlist`, {
+        googleId: book.googleId,
+        title: book.title,
+        author: book.author,
+        coverUrl: book.coverUrl,
+        isbn: book.isbn,
+        ageRange: book.ageRange,
+        description: book.description,
+        publishedDate: book.publishedDate,
+        olid: book.olid
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Book added to wishlist',
+        variant: 'default',
+      });
+      
+      // Invalidate queries to refresh the wishlist
+      queryClient.invalidateQueries({ queryKey: [`/api/children/${childId}/wishlist`] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add book to wishlist',
+        variant: 'destructive',
+      });
+    },
+  });
 
   const handleAddBook = (book: BookSearchResult) => {
     addBookMutation.mutate(book);
+  };
+  
+  const handleAddToWishlist = (book: BookSearchResult) => {
+    addToWishlistMutation.mutate(book);
   };
 
   return (
@@ -86,6 +125,7 @@ export function AddBookDialog({ childId, childAge = 3, onAddBook, trigger }: Add
               showAction={true}
               actionLabel="Add to Library"
               onBookAction={handleAddBook}
+              onAddToWishlist={handleAddToWishlist}
             />
           </TabsContent>
           

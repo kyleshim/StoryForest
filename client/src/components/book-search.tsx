@@ -21,6 +21,7 @@ interface BookSearchProps {
   showAction?: boolean;
   actionLabel?: string;
   onBookAction?: (book: BookSearchResult) => void;
+  onAddToWishlist?: (book: BookSearchResult) => void;
 }
 
 export function BookSearch({
@@ -29,7 +30,8 @@ export function BookSearch({
   view = 'card',
   showAction = false,
   actionLabel = 'Add',
-  onBookAction
+  onBookAction,
+  onAddToWishlist
 }: BookSearchProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -97,6 +99,7 @@ export function BookSearch({
               view="recommendation"
               onClick={() => onSelectBook && onSelectBook(book)}
               onAddToLibrary={showAction ? () => onBookAction && onBookAction(book) : undefined}
+              onAddToWishlist={onAddToWishlist ? () => onAddToWishlist(book) : undefined}
               actionLabel={actionLabel}
             />
           ))}

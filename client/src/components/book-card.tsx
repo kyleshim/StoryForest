@@ -83,16 +83,31 @@ export function BookCard({
         <p className="text-neutral-700 text-sm mb-3">{book.author}</p>
         
         {view === 'recommendation' ? (
-          <Button 
-            variant="secondary" 
-            className="w-full text-xs flex items-center gap-1"
-            onClick={(e) => {
-              e.stopPropagation(); // Prevent card click
-              onAddToLibrary?.();
-            }}
-          >
-            <Plus className="h-3 w-3 mr-1" /> {actionLabel}
-          </Button>
+          <div className="flex gap-2 items-center">
+            <Button 
+              variant="secondary" 
+              className="flex-1 text-xs flex items-center gap-1"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent card click
+                onAddToLibrary?.();
+              }}
+            >
+              <Plus className="h-3 w-3 mr-1" /> {actionLabel}
+            </Button>
+            {onAddToWishlist && (
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-full"
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent card click
+                  onAddToWishlist();
+                }}
+              >
+                <Heart className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         ) : (
           <div className="flex justify-between items-center">
             {view === 'library' && onRate && (
