@@ -1,6 +1,6 @@
 import { ChildWithStats } from '@shared/schema';
 import { AvatarWithBadge } from '@/components/ui/avatar-with-badge';
-import { cn } from '@/lib/utils';
+import { cn, calculateAge } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { AddBookDialog } from './add-book-dialog';
 import { BookSearchResult } from '@/lib/book-api';
@@ -15,6 +15,9 @@ interface ChildProfileProps {
 
 export function ChildProfile({ child, className }: ChildProfileProps) {
   const { toast } = useToast();
+  
+  // Calculate age from birth month and year
+  const age = calculateAge(child.birthMonth, child.birthYear);
   
   const addToLibraryMutation = useMutation({
     mutationFn: async (book: BookSearchResult) => {
@@ -46,6 +49,13 @@ export function ChildProfile({ child, className }: ChildProfileProps) {
 
   // Calculate join date string
   const joinDateString = "January 2023"; // In a real app, this would be calculated from child creation date
+  
+  // Get birth month name
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const birthMonthName = monthNames[child.birthMonth - 1];
 
   return (
     <div className={cn("flex flex-col sm:flex-row items-center gap-4 mb-8 bg-white rounded-xl p-4 shadow-sm", className)}>
@@ -54,7 +64,7 @@ export function ChildProfile({ child, className }: ChildProfileProps) {
           variant="secondary"
           size="xl"
           initial={child.name.charAt(0).toUpperCase()}
-          badgeText={child.age.toString()}
+          badgeText={age.toString()}
           badgeVariant="accent"
           badgeSize="lg"
         />
@@ -72,7 +82,10 @@ export function ChildProfile({ child, className }: ChildProfileProps) {
             {child.wishlistCount} Wishlist
           </Badge>
           <Badge variant="outline" className="bg-accent/10 text-accent">
-            Age: {child.age} {child.age <= 1 ? 'year' : 'years'}
+            Age: {age} {age <= 1 ? 'year' : 'years'}
+          </Badge>
+          <Badge variant="outline" className="bg-gray-100 text-neutral-700">
+            Born: {birthMonthName} {child.birthYear}
           </Badge>
         </div>
       </div>
@@ -80,6 +93,7 @@ export function ChildProfile({ child, className }: ChildProfileProps) {
       <div className="ml-auto mt-4 sm:mt-0">
         <AddBookDialog 
           childId={child.id}
+          childAge={age}
           onAddBook={handleAddBook}
         />
       </div>

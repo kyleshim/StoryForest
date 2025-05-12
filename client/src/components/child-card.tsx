@@ -2,6 +2,7 @@ import { ChildWithStats } from '@shared/schema';
 import { Card, CardContent } from '@/components/ui/card';
 import { AvatarWithBadge } from '@/components/ui/avatar-with-badge';
 import { Badge } from '@/components/ui/badge';
+import { calculateAge } from '@/lib/utils';
 
 interface ChildCardProps {
   child: ChildWithStats;
@@ -9,6 +10,16 @@ interface ChildCardProps {
 }
 
 export function ChildCard({ child, onClick }: ChildCardProps) {
+  // Calculate age from birth month and year
+  const age = calculateAge(child.birthMonth, child.birthYear);
+  
+  // Get birth month name
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const birthMonthName = monthNames[child.birthMonth - 1];
+  
   return (
     <Card 
       className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
@@ -20,13 +31,15 @@ export function ChildCard({ child, onClick }: ChildCardProps) {
             variant="secondary"
             size="lg"
             initial={child.name.charAt(0).toUpperCase()}
-            badgeText={child.age.toString()}
+            badgeText={age.toString()}
             badgeVariant="accent"
             badgeSize="md"
           />
           <div>
             <h3 className="font-heading font-semibold text-lg">{child.name}'s Reading Journey</h3>
-            <p className="text-sm text-neutral-600">Age: {child.age} {child.age <= 1 ? 'year' : 'years'}</p>
+            <p className="text-sm text-neutral-600">
+              Age: {age} {age <= 1 ? 'year' : 'years'} • Born: {birthMonthName} {child.birthYear}
+            </p>
           </div>
         </div>
         
