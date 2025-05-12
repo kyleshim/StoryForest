@@ -47,9 +47,6 @@ export function ChildProfile({ child, className }: ChildProfileProps) {
     await addToLibraryMutation.mutateAsync(book);
   };
 
-  // Calculate join date string
-  const joinDateString = "January 2023"; // In a real app, this would be calculated from child creation date
-  
   // Get birth month name
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
@@ -57,6 +54,9 @@ export function ChildProfile({ child, className }: ChildProfileProps) {
   ];
   const birthMonthName = monthNames[child.birthMonth - 1];
 
+  // Calculate birth date string
+  const joinDateString = `${birthMonthName} ${child.birthYear}`;
+  
   return (
     <div className={cn("flex flex-col sm:flex-row items-center gap-4 mb-8 bg-white rounded-xl p-4 shadow-sm", className)}>
       <div className="relative">
