@@ -9,6 +9,8 @@ import { Loader2, Search, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
 import { AvatarWithBadge } from '@/components/ui/avatar-with-badge';
+import { calculateAge } from '@/lib/utils';
+import { ChildWithStats } from '@shared/schema';
 
 export default function ExplorePage() {
   const [activeTab, setActiveTab] = useState('explore');
@@ -117,13 +119,18 @@ export default function ExplorePage() {
                         variant="secondary"
                         size="lg"
                         initial={child.name.charAt(0).toUpperCase()}
-                        badgeText={child.age.toString()}
+                        badgeText={calculateAge(child.birthMonth, child.birthYear).toString()}
                         badgeVariant="accent"
                         badgeSize="md"
                       />
                       <div>
                         <h3 className="font-heading font-semibold text-lg">{child.name}'s Library</h3>
-                        <p className="text-sm text-neutral-600">Age: {child.age} {child.age <= 1 ? 'year' : 'years'}</p>
+                        {(() => {
+                          const age = calculateAge(child.birthMonth, child.birthYear);
+                          return (
+                            <p className="text-sm text-neutral-600">Age: {age} {age <= 1 ? 'year' : 'years'}</p>
+                          );
+                        })()}
                       </div>
                     </div>
                     <div className="flex justify-between">
