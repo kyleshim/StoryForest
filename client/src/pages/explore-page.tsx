@@ -12,6 +12,13 @@ import { AvatarWithBadge } from '@/components/ui/avatar-with-badge';
 import { calculateAge } from '@/lib/utils';
 import { ChildWithStats } from '@shared/schema';
 
+// Interface for user search results
+interface UserSearchResult {
+  id: number;
+  name: string;
+  username: string;
+}
+
 export default function ExplorePage() {
   const [activeTab, setActiveTab] = useState('explore');
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,7 +27,7 @@ export default function ExplorePage() {
   const [, navigate] = useLocation();
 
   // Get public children profiles
-  const { data: publicChildren, isLoading: isChildrenLoading } = useQuery({
+  const { data: publicChildren, isLoading: isChildrenLoading } = useQuery<ChildWithStats[]>({
     queryKey: ['/api/discover/children'],
     queryFn: async () => {
       try {
@@ -39,7 +46,7 @@ export default function ExplorePage() {
   });
 
   // Search users
-  const { data: searchResults, isLoading: isSearchLoading } = useQuery({
+  const { data: searchResults, isLoading: isSearchLoading } = useQuery<UserSearchResult[]>({
     queryKey: [`/api/users/search`, userSearchQuery],
     queryFn: async () => {
       if (!userSearchQuery) return [];
@@ -59,7 +66,7 @@ export default function ExplorePage() {
   // Filter public children by search query
   const filteredChildren = publicChildren
     ? publicChildren.filter(
-        child => searchQuery
+        (child: ChildWithStats) => searchQuery
           ? child.name.toLowerCase().includes(searchQuery.toLowerCase())
           : true
       )
@@ -107,7 +114,7 @@ export default function ExplorePage() {
             </div>
           ) : filteredChildren && filteredChildren.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {filteredChildren.map((child) => (
+              {filteredChildren.map((child: ChildWithStats) => (
                 <Card 
                   key={child.id} 
                   className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
@@ -116,11 +123,11 @@ export default function ExplorePage() {
                   <CardContent className="p-6">
                     <div className="flex items-center gap-4 mb-4">
                       <AvatarWithBadge
-                        variant="secondary"
+                        variant="default"
                         size="lg"
                         initial={child.name.charAt(0).toUpperCase()}
                         badgeText={calculateAge(child.birthMonth, child.birthYear).toString()}
-                        badgeVariant="accent"
+                        badgeVariant="default"
                         badgeSize="md"
                       />
                       <div>
@@ -189,7 +196,7 @@ export default function ExplorePage() {
             </div>
           ) : userSearchQuery && searchResults && searchResults.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {searchResults.map((user) => (
+              {searchResults.map((user: UserSearchResult) => (
                 <Card 
                   key={user.id} 
                   className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
@@ -198,7 +205,7 @@ export default function ExplorePage() {
                   <CardContent className="p-6 flex items-center gap-4">
                     <div className="h-12 w-12 bg-accent rounded-full flex items-center justify-center">
                       <span className="text-white font-semibold">
-                        {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        {user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
                       </span>
                     </div>
                     <div>
