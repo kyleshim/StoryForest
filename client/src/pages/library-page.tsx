@@ -20,6 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { getBookById, BookDetailResult } from '@/lib/book-api';
+import React, { ReactNode } from 'react';
 
 export default function LibraryPage() {
   const { childId } = useParams();
@@ -29,6 +32,24 @@ export default function LibraryPage() {
   const [activeTab, setActiveTab] = useState('library');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState('recent');
+  const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
+  const [bookDetail, setBookDetail] = useState<BookDetailResult | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  type Book = {
+    id: number;
+    googleId?: string;
+    olid?: string;
+    title: string;
+    author: string;
+    coverUrl?: string;
+    isbn?: string;
+    ageRange?: string;
+    inLibrary?: boolean;
+    inWishlist?: boolean;
+    rating?: string | null;
+  };
 
   const { data: child, isLoading: isChildLoading } = useQuery({
     queryKey: [`/api/children/${parsedChildId}`],
@@ -37,7 +58,7 @@ export default function LibraryPage() {
         const res = await fetch(`/api/children/${parsedChildId}`);
         if (!res.ok) throw new Error("Failed to fetch child data");
         return await res.json();
-      } catch (error) {
+      } catch (error: any) {
         toast({
           title: "Error",
           description: "Could not load child profile",
@@ -71,7 +92,7 @@ export default function LibraryPage() {
         description: "Your rating has been saved.",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Rating failed",
         description: error.message,
@@ -83,7 +104,7 @@ export default function LibraryPage() {
   // Add to wishlist mutation
   const addToWishlistMutation = useMutation({
     mutationFn: async (bookId: number) => {
-      const book = libraryBooks.find(b => b.id === bookId);
+      const book = libraryBooks.find((b: Book) => b.id === bookId);
       if (!book) throw new Error("Book not found");
       
       await apiRequest('POST', `/api/children/${parsedChildId}/wishlist`, {
@@ -103,7 +124,7 @@ export default function LibraryPage() {
         description: "The book has been added to your wishlist.",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Failed to add to wishlist",
         description: error.message,
@@ -125,7 +146,7 @@ export default function LibraryPage() {
         description: "The book has been removed from your library.",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Failed to remove book",
         description: error.message,
@@ -138,13 +159,13 @@ export default function LibraryPage() {
   const filterAndSortBooks = () => {
     if (!libraryBooks) return [];
     
-    let filtered = libraryBooks;
+    let filtered = libraryBooks as Book[];
     
     // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        book => 
+        (book: Book) => 
           book.title.toLowerCase().includes(query) || 
           book.author.toLowerCase().includes(query)
       );
@@ -153,10 +174,10 @@ export default function LibraryPage() {
     // Apply sorting
     switch (sortOption) {
       case 'title':
-        filtered = [...filtered].sort((a, b) => a.title.localeCompare(b.title));
+        filtered = [...filtered].sort((a: Book, b: Book) => a.title.localeCompare(b.title));
         break;
       case 'author':
-        filtered = [...filtered].sort((a, b) => a.author.localeCompare(b.author));
+        filtered = [...filtered].sort((a: Book, b: Book) => a.author.localeCompare(b.author));
         break;
       case 'recent':
       default:
@@ -168,6 +189,16 @@ export default function LibraryPage() {
   };
 
   const filteredBooks = libraryBooks ? filterAndSortBooks() : [];
+
+  const handleBookClick = async (book: Book) => {
+    setSelectedBookId(book.googleId || book.olid || book.id.toString());
+    setLoadingDetail(true);
+    setDetailOpen(true);
+    const id = book.googleId || book.olid || book.id.toString();
+    const detail = await getBookById(id);
+    setBookDetail(detail);
+    setLoadingDetail(false);
+  };
 
   if (isChildLoading) {
     return (
@@ -266,6 +297,7 @@ export default function LibraryPage() {
                   onRate={(rating) => rateMutation.mutate({ bookId: book.id, rating })}
                   onAddToWishlist={() => addToWishlistMutation.mutate(book.id)}
                   onRemoveFromLibrary={() => removeFromLibraryMutation.mutate(book.id)}
+                  onClick={() => handleBookClick(book)}
                 />
               ))}
             </div>
@@ -289,6 +321,54 @@ export default function LibraryPage() {
               <ReadingStats child={child} />
             </>
           )}
+          {/* Book Detail Dialog */}
+          <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>{bookDetail?.title || 'Book Details'}</DialogTitle>
+                <DialogDescription>{bookDetail?.author}</DialogDescription>
+              </DialogHeader>
+              {loadingDetail ? (
+                <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+              ) : bookDetail ? (
+                <div className="space-y-2">
+                  <img src={bookDetail.coverUrl} alt={bookDetail.title} className="w-32 h-48 object-cover mx-auto rounded" />
+                  <p className="text-sm text-neutral-700">{bookDetail.description}</p>
+                  <div className="text-xs text-neutral-500 mt-2">
+                    <div>Published: {bookDetail.publishedDate}</div>
+                    <div>Pages: {bookDetail.pageCount}</div>
+                    <div>Categories: {bookDetail.categories?.join(', ')}</div>
+                    <div>ISBN: {bookDetail.isbn}</div>
+                    <div>Average Rating: {bookDetail.averageRating} ({bookDetail.ratingsCount} ratings)</div>
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      variant="destructive"
+                      disabled={!filteredBooks.find((b: Book) => b.id === bookDetail.id && b.inLibrary)}
+                      onClick={async () => {
+                        await removeFromLibraryMutation.mutateAsync(bookDetail.id);
+                        setDetailOpen(false);
+                      }}
+                    >
+                      Remove from Library
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={!!filteredBooks.find((b: Book) => b.id === bookDetail.id && b.inWishlist)}
+                      onClick={async () => {
+                        await addToWishlistMutation.mutateAsync(bookDetail.id);
+                        setDetailOpen(false);
+                      }}
+                    >
+                      {filteredBooks.find((b: Book) => b.id === bookDetail.id && b.inWishlist) ? 'In Wishlist' : 'Add to Wishlist'}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-neutral-500">No details found.</div>
+              )}
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </MainLayout>
