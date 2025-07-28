@@ -30,8 +30,15 @@ export function setupAuth(app: Express) {
   app.set("trust proxy", 1);
   app.use(session(sessionSettings));
   
-  // Use Clerk's middleware to require auth for API routes
-  app.use("/api", ClerkExpressRequireAuth({}));
+  // Use Clerk's middleware to require auth for API routes (excluding test endpoints)
+  app.use("/api", (req, res, next) => {
+    // Skip auth for test endpoints
+    if (req.path.startsWith('/api/test/')) {
+      return next();
+    }
+    // Apply Clerk auth for all other API routes
+    ClerkExpressRequireAuth({})(req, res, next);
+  });
   
   // Create or update user preferences when a user profile is updated
   app.post("/api/webhook/clerk", async (req, res) => {

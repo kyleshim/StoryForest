@@ -12,11 +12,15 @@ import WishlistPage from "@/pages/wishlist-page";
 import ExplorePage from "@/pages/explore-page";
 import ProfilePage from "@/pages/profile-page";
 import AuthPage from "@/pages/auth-page";
+import DebugPage from "@/pages/debug-page";
 import { RedirectToSignIn, SignedIn, SignedOut } from "@clerk/clerk-react";
 
 function Router() {
   return (
     <Switch>
+      <Route path="/debug">
+        <DebugPage />
+      </Route>
       <Route path="/auth">
         <SignedOut>
           <AuthPage />

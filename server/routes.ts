@@ -12,6 +12,45 @@ import { z } from "zod";
 import axios from "axios";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Debug endpoint for testing thumbnails without auth
+  app.get("/test-books", async (req, res) => {
+    try {
+      // Return some sample book data for testing thumbnails
+      const sampleBooks = [
+        {
+          id: 1,
+          title: "The Very Hungry Caterpillar",
+          author: "Eric Carle",
+          coverUrl: "https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1327861493i/4948.jpg",
+          ageRange: "2-5 years",
+          isbn: null,
+          olid: null
+        },
+        {
+          id: 2,
+          title: "Where the Wild Things Are",
+          author: "Maurice Sendak", 
+          coverUrl: "https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1384998750i/19543.jpg",
+          ageRange: "4-8 years",
+          isbn: null,
+          olid: null
+        },
+        {
+          id: 3,
+          title: "Goodnight Moon",
+          author: "Margaret Wise Brown",
+          coverUrl: "https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1362562563i/32929.jpg",
+          ageRange: "0-3 years",
+          isbn: null,
+          olid: null
+        }
+      ];
+      res.json(sampleBooks);
+    } catch (error) {
+      res.status(500).json({ error: "Debug endpoint failed" });
+    }
+  });
+
   // Set up authentication routes
   setupAuth(app);
   
