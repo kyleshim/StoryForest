@@ -50,7 +50,7 @@ export function BookCard({
       <div className="relative pt-[140%]">
         <img 
           src={book.coverUrl || 'https://via.placeholder.com/200x300?text=No+Cover'} 
-          className="absolute top-0 left-0 w-full h-full object-cover" 
+          className="absolute top-0 left-0 w-full h-full object-contain" 
           alt={book.title}
           onError={(e) => {
             e.currentTarget.src = 'https://via.placeholder.com/200x300?text=No+Cover';
