@@ -1,5 +1,5 @@
 import { useLocation, Link } from 'wouter';
-import { Home, Search, BookOpen, User } from 'lucide-react';
+import { BookOpen, Heart, Compass, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MobileNavigationProps {
@@ -9,25 +9,25 @@ interface MobileNavigationProps {
 export function MobileNavigation({ childId }: MobileNavigationProps) {
   const [location] = useLocation();
 
-  // Define navigation items to match the image
+  // Define navigation items
   const navItems = [
-    {
-      icon: Home,
-      label: 'For you',
-      href: '/',
-      active: location === '/',
-    },
-    {
-      icon: Search,
-      label: 'Explore',
-      href: '/explore',
-      active: location.includes('/explore'),
-    },
     {
       icon: BookOpen,
       label: 'Library',
-      href: childId ? `/library/${childId}` : '/library',
-      active: location.includes('/library'),
+      href: childId ? `/library/${childId}` : '/',
+      active: location.includes('/library') || location === '/',
+    },
+    {
+      icon: Heart,
+      label: 'Wishlist',
+      href: childId ? `/wishlist/${childId}` : '/',
+      active: location.includes('/wishlist'),
+    },
+    {
+      icon: Compass,
+      label: 'Explore',
+      href: '/explore',
+      active: location.includes('/explore'),
     },
     {
       icon: User,
@@ -38,21 +38,21 @@ export function MobileNavigation({ childId }: MobileNavigationProps) {
   ];
 
   return (
-    <nav className="md:hidden bg-white border-t border-gray-200 py-2 px-4 fixed bottom-0 left-0 right-0 z-10">
+    <nav className="md:hidden bg-white border-t border-neutral-200 py-2 px-6 fixed bottom-0 left-0 right-0 z-10">
       <div className="flex justify-around">
         {navItems.map((item) => (
           <Link key={item.label} href={item.href}>
-            <a className="flex flex-col items-center py-2 px-3 min-w-0">
+            <a className="flex flex-col items-center">
               <item.icon 
                 className={cn(
-                  "text-lg mb-1", 
-                  item.active ? "text-blue-500" : "text-gray-500"
+                  "text-lg", 
+                  item.active ? "text-primary" : "text-neutral-700"
                 )} 
-                size={24} 
+                size={20} 
               />
               <span className={cn(
-                "text-xs text-center", 
-                item.active ? "text-blue-500 font-medium" : "text-gray-500"
+                "text-xs mt-1", 
+                item.active ? "text-primary font-medium" : "text-neutral-700"
               )}>
                 {item.label}
               </span>

@@ -10,7 +10,7 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, childId }: MainLayoutProps) {
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen">
       <Header />
       <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
         <div className="container mx-auto px-4 py-6">
