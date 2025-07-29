@@ -28,11 +28,11 @@ export function ChildCard({ child, onClick }: ChildCardProps) {
       <CardContent className="p-6">
         <div className="flex items-center gap-4 mb-4">
           <AvatarWithBadge
-            variant="secondary"
+            variant="default"
             size="lg"
             initial={child.name.charAt(0).toUpperCase()}
             badgeText={age.toString()}
-            badgeVariant="accent"
+            badgeVariant="primary"
             badgeSize="md"
           />
           <div>

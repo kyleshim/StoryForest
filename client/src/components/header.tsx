@@ -27,14 +27,15 @@ export function Header() {
     : 'SF';
 
   return (
-    <header className="bg-white shadow-md">
-      <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-        <div className="flex items-center space-x-2">
-          <svg className="w-8 h-8 text-primary" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-            <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12z"></path>
-            <path d="M10 4a1 1 0 00-1 1v4a1 1 0 00.293.707l2.5 2.5a1 1 0 001.414-1.414L10.414 8.414V5a1 1 0 00-1-1z"></path>
-          </svg>
-          <h1 className="font-heading font-bold text-xl text-primary">Story Forest</h1>
+    <header className="bg-white border-b border-gray-100">
+      <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
+            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2L13.09 8.26L21 9L13.09 9.74L12 16L10.91 9.74L3 9L10.91 8.26L12 2Z"/>
+            </svg>
+          </div>
+          <h1 className="font-bold text-xl text-black">StoryForest</h1>
         </div>
         
         <div className="flex items-center space-x-4">
