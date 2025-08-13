@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { useLocation } from 'wouter';
+import { Barn } from './garden-icons';
 
 export function Header() {
   const { user, signOut } = useAuth();
@@ -24,32 +25,29 @@ export function Header() {
   // Get user initials from username if full name is not available
   const userInitials = user.username
     ? user.username.substring(0, 2).toUpperCase()
-    : 'SF';
+    : 'RR';
 
   return (
-    <header className="bg-white shadow-md">
+    <header className="bg-white/80 backdrop-blur-sm shadow-lg border-b border-green-100">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-        <div className="flex items-center space-x-2">
-          <svg className="w-8 h-8 text-primary" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-            <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12z"></path>
-            <path d="M10 4a1 1 0 00-1 1v4a1 1 0 00.293.707l2.5 2.5a1 1 0 001.414-1.414L10.414 8.414V5a1 1 0 00-1-1z"></path>
-          </svg>
-          <h1 className="font-heading font-bold text-xl text-primary">Story Forest</h1>
+        <div className="flex items-center space-x-3">
+          <Barn className="w-8 h-8" />
+          <h1 className="font-heading font-bold text-xl text-green-900">Reading Roots</h1>
         </div>
         
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="icon" className="text-neutral-700">
+          <Button variant="ghost" size="icon" className="text-green-700 hover:bg-green-100">
             <Bell size={20} />
           </Button>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8 bg-accent">
+                <Avatar className="h-8 w-8 bg-emerald-500">
                   {user.profileImageUrl ? (
                     <AvatarImage src={user.profileImageUrl} alt={user.username || 'User'} />
                   ) : (
-                    <AvatarFallback className="text-white text-sm font-semibold">
+                    <AvatarFallback className="text-white text-sm font-semibold bg-emerald-500">
                       {userInitials}
                     </AvatarFallback>
                   )}

@@ -34,7 +34,7 @@ function Router() {
           <HomePage />
         </SignedIn>
         <SignedOut>
-          <RedirectToSignIn />
+          <AuthPage />
         </SignedOut>
       </Route>
       <Route path="/library/:childId">

@@ -1,11 +1,11 @@
 import React from 'react';
-import { Card } from "@/components/ui/card";
 import { BookWithDetails } from '@shared/schema';
 import { Heart, ThumbsUp, ThumbsDown, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BookSearchResult } from '@/lib/book-api';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Sprout, Bee } from './garden-icons';
 
 export interface BookCardProps {
   book: BookWithDetails | BookSearchResult;
@@ -40,36 +40,50 @@ export function BookCard({
   const inWishlist = isBookWithDetails(book) ? book.inWishlist : false;
 
   return (
-    <Card 
+    <div 
       className={cn(
-        "book-card overflow-hidden shadow-sm transition-all hover:shadow-md",
+        "group relative overflow-hidden rounded-2xl border border-green-200 bg-white/80 backdrop-blur shadow hover:shadow-md transition book-card",
         onClick ? "cursor-pointer hover:-translate-y-1" : ""
       )}
       onClick={onClick}
+      style={{
+        backgroundImage:
+          "radial-gradient(circle at 10% 10%, rgba(134,239,172,0.15) 0 20%, transparent 20%), radial-gradient(circle at 90% 30%, rgba(252,211,77,0.15) 0 20%, transparent 20%)",
+      }}
     >
-      <div className="relative pt-[140%]">
-        <img 
-          src={book.coverUrl || 'https://via.placeholder.com/200x300?text=No+Cover'} 
-          className="absolute top-0 left-0 w-full h-full object-contain" 
-          alt={book.title}
-          onError={(e) => {
-            e.currentTarget.src = 'https://via.placeholder.com/200x300?text=No+Cover';
-          }}
-        />
+      {/* Seed packet header */}
+      <div className="flex items-start gap-3 p-3">
+        <div className="h-12 w-8 shrink-0 rounded-md border-2 border-green-400 bg-white flex items-center justify-center shadow-inner">
+          <Sprout className="w-4 h-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate font-bold text-green-900 text-sm" title={book.title}>
+            {book.title}
+          </h3>
+          <p className="text-green-700 text-xs truncate" title={book.author}>{book.author}</p>
+          {book.ageRange && (
+            <div className="mt-1">
+              <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs text-green-800">
+                <Sprout className="w-3 h-3" />
+                {book.ageRange}
+              </span>
+            </div>
+          )}
+        </div>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <button 
                 className={cn(
-                  "absolute top-2 right-2 bg-white/80 backdrop-blur-sm rounded-full p-2",
-                  inWishlist ? "text-accent hover:text-accent/80" : "text-neutral-700 hover:text-accent"
+                  "rounded-full p-1.5 transition",
+                  inWishlist ? "bg-amber-100 text-amber-600 hover:bg-amber-200" : "bg-green-100 text-green-600 hover:bg-green-200"
                 )}
                 onClick={(e) => {
-                  e.stopPropagation(); // Prevent card click
+                  e.stopPropagation();
                   inWishlist ? onRemoveFromWishlist?.() : onAddToWishlist?.();
                 }}
               >
-                <Heart className={cn("h-4 w-4", inWishlist ? "fill-current" : "")} />
+                <Heart className={cn("h-3 w-3", inWishlist ? "fill-current" : "")} />
               </button>
             </TooltipTrigger>
             <TooltipContent>
@@ -78,74 +92,80 @@ export function BookCard({
           </Tooltip>
         </TooltipProvider>
       </div>
-      <div className="p-4">
-        <h3 className="font-heading font-semibold text-neutral-800 line-clamp-1">{book.title}</h3>
-        <p className="text-neutral-700 text-sm mb-3">{book.author}</p>
+
+      {/* Book cover */}
+      <div className="relative mx-3 mb-3">
+        <div className="relative pt-[140%] rounded-lg overflow-hidden border border-green-200">
+          <img 
+            src={book.coverUrl || 'https://via.placeholder.com/200x300?text=No+Cover'} 
+            className="absolute top-0 left-0 w-full h-full object-contain bg-white" 
+            alt={book.title}
+            onError={(e) => {
+              e.currentTarget.src = 'https://via.placeholder.com/200x300?text=No+Cover';
+            }}
+          />
+        </div>
+      </div>
+      <div className="p-3 pt-0">
         
         {view === 'recommendation' ? (
           <div className="flex gap-2 items-center">
-            <Button 
-              variant="secondary" 
-              className="flex-1 text-xs flex items-center gap-1"
+            <button
+              className="flex-1 rounded-xl bg-emerald-500 text-white px-3 py-2 text-xs font-semibold shadow hover:bg-emerald-600 transition flex items-center justify-center gap-1"
               onClick={(e) => {
-                e.stopPropagation(); // Prevent card click
+                e.stopPropagation();
                 onAddToLibrary?.();
               }}
             >
-              <Plus className="h-3 w-3 mr-1" /> {actionLabel}
-            </Button>
-            {onAddToWishlist && (
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 rounded-full"
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent card click
-                  onAddToWishlist();
-                }}
-              >
-                <Heart className="h-4 w-4" />
-              </Button>
-            )}
+              <Plus className="h-3 w-3" /> Plant It!
+            </button>
           </div>
         ) : (
           <div className="flex justify-between items-center">
             {view === 'library' && onRate && (
-              <div className="flex space-x-2">
+              <div className="flex space-x-1">
                 <button 
                   className={cn(
-                    "rounded-full p-1.5",
-                    rating === 'up' ? "bg-success/10 text-success" : "bg-neutral-100 text-neutral-700"
+                    "rounded-full p-1.5 text-xs transition",
+                    rating === 'up' ? "bg-emerald-100 text-emerald-700" : "bg-green-100 text-green-600 hover:bg-emerald-100"
                   )}
                   onClick={(e) => {
-                    e.stopPropagation(); // Prevent card click
+                    e.stopPropagation();
                     onRate(rating === 'up' ? null : 'up');
                   }}
                 >
-                  <ThumbsUp className="h-4 w-4" />
+                  <ThumbsUp className="h-3 w-3" />
                 </button>
                 <button 
                   className={cn(
-                    "rounded-full p-1.5",
-                    rating === 'down' ? "bg-error/10 text-error" : "bg-neutral-100 text-neutral-700"
+                    "rounded-full p-1.5 text-xs transition",
+                    rating === 'down' ? "bg-red-100 text-red-700" : "bg-green-100 text-green-600 hover:bg-red-100"
                   )}
                   onClick={(e) => {
-                    e.stopPropagation(); // Prevent card click
+                    e.stopPropagation();
                     onRate(rating === 'down' ? null : 'down');
                   }}
                 >
-                  <ThumbsDown className="h-4 w-4" />
+                  <ThumbsDown className="h-3 w-3" />
                 </button>
               </div>
             )}
-            {book.ageRange && (
-              <span className="text-xs text-neutral-600 bg-neutral-100 px-2 py-1 rounded-full">
-                {book.ageRange}
+            {inLibrary && (
+              <span className="text-[10px] text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full border border-emerald-200 font-semibold">
+                PLANTED
               </span>
             )}
           </div>
         )}
       </div>
-    </Card>
+
+      {/* Accent strip */}
+      <div className="absolute right-0 top-0 h-full w-1 bg-gradient-to-b from-green-400 to-emerald-500" />
+
+      {/* Hover bee */}
+      <div className="pointer-events-none absolute -right-4 -top-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+        <Bee />
+      </div>
+    </div>
   );
 }

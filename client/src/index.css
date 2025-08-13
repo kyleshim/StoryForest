@@ -89,7 +89,8 @@
   }
 
   body {
-    @apply font-body antialiased bg-background text-foreground;
+    @apply font-body antialiased bg-gradient-to-b from-green-50 to-emerald-50 text-green-950;
+    min-height: 100vh;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -106,5 +107,11 @@
 
   .tab-active {
     @apply border-b-2 border-primary text-primary font-semibold;
+  }
+
+  /* Garden animations */
+  @keyframes float { 
+    0%, 100% { transform: translateY(0) } 
+    50% { transform: translateY(6px) } 
   }
 }

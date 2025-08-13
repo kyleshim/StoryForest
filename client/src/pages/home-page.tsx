@@ -15,6 +15,10 @@ import {
 } from '@/components/ui/dialog';
 import { ChildCard } from '@/components/child-card';
 import { ChildForm } from '@/components/child-form';
+import { GardenHeader } from '@/components/garden-header';
+import { StatPill, GardenButton } from '@/components/garden-components';
+import { Sprout, Bee } from '@/components/garden-icons';
+import type { ChildWithStats } from '@shared/schema';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -43,48 +47,86 @@ export default function HomePage() {
 
   return (
     <MainLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-heading font-bold">
-          Welcome, {user?.firstName || user?.username || 'Friend'}
-        </h1>
-        <Button onClick={() => setAddChildOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Add Child
-        </Button>
+      <div className="space-y-6">
+        <GardenHeader />
+        
+        {/* Welcome section */}
+        <div className="rounded-2xl border border-green-200 bg-white/70 backdrop-blur p-6 shadow">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h2 className="text-2xl font-heading font-bold text-green-900">
+                Welcome, {user?.firstName || user?.username || 'Friend'}!
+              </h2>
+              <p className="text-green-700 mt-1">Let's tend to your little readers' garden</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <StatPill 
+                label="Children" 
+                value={children?.length || 0} 
+                icon={<span>👶</span>} 
+              />
+              <GardenButton onClick={() => setAddChildOpen(true)}>
+                <Plus className="w-4 h-4" /> Add Child
+              </GardenButton>
+            </div>
+          </div>
+        </div>
+
+        {children?.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {children.map((child: ChildWithStats) => (
+              <ChildCard 
+                key={child.id} 
+                child={child} 
+                onClick={() => navigate(`/library/${child.id}`)} 
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center rounded-2xl border border-green-200 bg-white/70 backdrop-blur p-12 shadow">
+            <div className="max-w-md mx-auto">
+              <div className="flex justify-center mb-4">
+                <div className="relative">
+                  <Sprout className="w-16 h-16 text-green-500" />
+                  <div className="absolute -top-2 -right-2">
+                    <Bee className="w-8 h-8 animate-bounce" />
+                  </div>
+                </div>
+              </div>
+              <h3 className="text-xl font-heading font-semibold text-green-900 mb-2">
+                No little gardeners yet!
+              </h3>
+              <p className="text-green-700 mb-6">
+                Plant the first seed by adding a child profile to begin cultivating their reading garden.
+              </p>
+              <GardenButton onClick={() => setAddChildOpen(true)}>
+                <Plus className="w-4 h-4" /> Plant Your First Seed
+              </GardenButton>
+            </div>
+          </div>
+        )}
+
+        {/* Garden footer tip */}
+        <div className="relative rounded-2xl border border-amber-200 bg-amber-50/80 backdrop-blur p-4 shadow">
+          <div className="flex items-center gap-2 text-amber-900 text-sm">
+            <span>🌾</span>
+            <p>
+              <span className="font-semibold">Garden Tip:</span> Each child's reading garden grows unique. 
+              Watch their literary roots flourish with every book planted!
+            </p>
+          </div>
+        </div>
       </div>
 
-      {children?.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {children.map((child) => (
-            <ChildCard 
-              key={child.id} 
-              child={child} 
-              onClick={() => navigate(`/library/${child.id}`)} 
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center p-12 bg-white rounded-xl shadow-sm">
-          <h3 className="text-xl font-heading font-semibold mb-2">No children profiles yet</h3>
-          <p className="text-neutral-600 mb-4">
-            Start by adding a child profile to begin building their reading journey.
-          </p>
-          <img 
-            src="https://images.unsplash.com/photo-1572297373790-8043cb8ed5a6?q=80&w=1500&auto=format&fit=crop"
-            alt="Child reading"
-            className="max-w-xs mx-auto rounded-lg mb-4"
-          />
-          <Button onClick={() => setAddChildOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Add Child Profile
-          </Button>
-        </div>
-      )}
-
       <Dialog open={addChildOpen} onOpenChange={setAddChildOpen}>
-        <DialogContent>
+        <DialogContent className="border-green-200">
           <DialogHeader>
-            <DialogTitle className="font-heading">Add Child Profile</DialogTitle>
-            <DialogDescription>
-              Create a profile for your child to start tracking their reading journey.
+            <DialogTitle className="font-heading text-green-900 flex items-center gap-2">
+              <Sprout className="w-5 h-5" />
+              Add Little Gardener
+            </DialogTitle>
+            <DialogDescription className="text-green-700">
+              Create a profile for your child to start planting their reading garden.
             </DialogDescription>
           </DialogHeader>
           <ChildForm onSuccess={() => setAddChildOpen(false)} />
