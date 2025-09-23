@@ -72,6 +72,23 @@ export async function getBookById(id: string): Promise<BookDetailResult | null> 
 }
 
 /**
+ * Search for a book by ISBN
+ * @param isbn The ISBN to search for
+ */
+export async function searchBookByIsbn(isbn: string): Promise<BookSearchResult | null> {
+  if (!isbn) return null;
+  
+  try {
+    const response = await apiRequest("GET", `/api/books/isbn/${isbn}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error searching book by ISBN:", error);
+    return null;
+  }
+}
+
+/**
  * Get recommended books for a child based on age
  * @param childAge Child's age
  */

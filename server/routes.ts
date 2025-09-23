@@ -452,6 +452,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Search book by ISBN
+  app.get("/api/books/isbn/:isbn", async (req, res) => {
+    if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized" });
+    
+    try {
+      const isbn = req.params.isbn;
+      
+      console.log('ISBN search request:', { isbn });
+      
+      if (!isbn) {
+        return res.status(400).json({ error: "ISBN is required" });
+      }
+      
+      // Clean the ISBN (remove any non-numeric characters except X)
+      const cleanedIsbn = isbn.replace(/[^0-9X]/gi, '');
+      
+      console.log('Sending request to Google Books API with ISBN:', cleanedIsbn);
+      
+      const response = await axios.get('https://www.googleapis.com/books/v1/volumes', {
+        params: {
+          q: `isbn:${cleanedIsbn}`,
+          maxResults: 5,
+          printType: 'books'
+        }
+      });
+      
+      console.log('Google Books API response received. Items found:', response.data.items?.length || 0);
+
+      // Transform the Google Books API response to match our app's format
+      const books = response.data.items ? response.data.items.map((item: any) => {
+        // Extract the book ID from the selfLink
+        const googleId = item.id;
+        
+        // Get volume info
+        const volumeInfo = item.volumeInfo || {};
+        
+        // Get cover image URL
+        let coverUrl = '';
+        if (volumeInfo.imageLinks) {
+          coverUrl = volumeInfo.imageLinks.thumbnail || volumeInfo.imageLinks.smallThumbnail || '';
+          // Convert HTTP to HTTPS if needed
+          coverUrl = coverUrl.replace('http://', 'https://');
+        }
+        
+        // Get ISBN
+        let bookIsbn = '';
+        if (volumeInfo.industryIdentifiers && volumeInfo.industryIdentifiers.length > 0) {
+          const isbnObj = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_13') || 
+                        volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10') ||
+                        volumeInfo.industryIdentifiers[0];
+          bookIsbn = isbnObj.identifier;
+        }
+        
+        return {
+          googleId,
+          title: volumeInfo.title || 'Unknown Title',
+          author: volumeInfo.authors ? volumeInfo.authors.join(', ') : 'Unknown Author',
+          coverUrl,
+          isbn: bookIsbn,
+          ageRange: '',
+          description: volumeInfo.description || '',
+          publishedDate: volumeInfo.publishedDate || '',
+          olid: googleId // Using Google ID as our olid for consistency
+        };
+      }) : [];
+      
+      if (books.length === 0) {
+        return res.status(404).json({ error: "No books found for this ISBN" });
+      }
+      
+      // Return the first (most relevant) book
+      res.json(books[0]);
+    } catch (error) {
+      console.error('Google Books API error:', error);
+      res.status(500).json({ error: "Failed to search book by ISBN" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

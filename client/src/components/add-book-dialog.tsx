@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Recommendations } from './recommendations';
+import { IsbnScanner } from './isbn-scanner';
 
 interface AddBookDialogProps {
   childId: number;
@@ -114,8 +115,9 @@ export function AddBookDialog({ childId, childAge = 3, onAddBook, trigger }: Add
         </DialogHeader>
 
         <Tabs defaultValue="search" value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="search">Search Books</TabsTrigger>
+            <TabsTrigger value="scanner">Scan ISBN</TabsTrigger>
             <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
           </TabsList>
           
@@ -125,6 +127,13 @@ export function AddBookDialog({ childId, childAge = 3, onAddBook, trigger }: Add
               showAction={true}
               actionLabel="Add to Library"
               onBookAction={handleAddBook}
+              onAddToWishlist={handleAddToWishlist}
+            />
+          </TabsContent>
+          
+          <TabsContent value="scanner" className="mt-4">
+            <IsbnScanner 
+              onAddToLibrary={handleAddBook}
               onAddToWishlist={handleAddToWishlist}
             />
           </TabsContent>
