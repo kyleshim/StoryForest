@@ -12,42 +12,52 @@ import { z } from "zod";
 import axios from "axios";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Debug endpoint for testing thumbnails without auth
-  app.get("/test-books", async (req, res) => {
+  // Public endpoint for featured books (no auth required)
+  app.get("/api/books/featured", async (req, res) => {
     try {
-      // Return some sample book data for testing thumbnails
-      const sampleBooks = [
-        {
-          id: 1,
-          title: "The Very Hungry Caterpillar",
-          author: "Eric Carle",
-          coverUrl: "https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1327861493i/4948.jpg",
-          ageRange: "2-5 years",
-          isbn: null,
-          olid: null
-        },
-        {
-          id: 2,
-          title: "Where the Wild Things Are",
-          author: "Maurice Sendak", 
-          coverUrl: "https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1384998750i/19543.jpg",
-          ageRange: "4-8 years",
-          isbn: null,
-          olid: null
-        },
-        {
-          id: 3,
-          title: "Goodnight Moon",
-          author: "Margaret Wise Brown",
-          coverUrl: "https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1362562563i/32929.jpg",
-          ageRange: "0-3 years",
-          isbn: null,
-          olid: null
+      const response = await axios.get('https://www.googleapis.com/books/v1/volumes', {
+        params: {
+          q: 'subject:children',
+          maxResults: 12,
+          printType: 'books',
+          orderBy: 'relevance'
         }
-      ];
-      res.json(sampleBooks);
+      });
+
+      const books = response.data.items ? response.data.items.map((item: any) => {
+        const volumeInfo = item.volumeInfo || {};
+        
+        let coverUrl = '';
+        if (volumeInfo.imageLinks) {
+          coverUrl = volumeInfo.imageLinks.thumbnail || volumeInfo.imageLinks.smallThumbnail || '';
+          coverUrl = coverUrl.replace('http://', 'https://');
+        }
+        
+        let isbn = '';
+        if (volumeInfo.industryIdentifiers && volumeInfo.industryIdentifiers.length > 0) {
+          const isbnObj = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_13') || 
+                        volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10') ||
+                        volumeInfo.industryIdentifiers[0];
+          isbn = isbnObj.identifier;
+        }
+        
+        return {
+          googleId: item.id,
+          title: volumeInfo.title || 'Unknown Title',
+          author: volumeInfo.authors ? volumeInfo.authors.join(', ') : 'Unknown Author',
+          coverUrl,
+          isbn,
+          ageRange: '',
+          description: volumeInfo.description || '',
+          publishedDate: volumeInfo.publishedDate || '',
+          olid: item.id
+        };
+      }) : [];
+      
+      res.json(books);
     } catch (error) {
-      res.status(500).json({ error: "Debug endpoint failed" });
+      console.error('Google Books API error:', error);
+      res.status(500).json({ error: "Failed to fetch featured books" });
     }
   });
 

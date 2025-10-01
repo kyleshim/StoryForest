@@ -13,6 +13,7 @@ import ExplorePage from "@/pages/explore-page";
 import ProfilePage from "@/pages/profile-page";
 import AuthPage from "@/pages/auth-page";
 import DebugPage from "@/pages/debug-page";
+import LandingPage from "@/pages/landing-page";
 import { RedirectToSignIn, SignedIn, SignedOut } from "@clerk/clerk-react";
 
 function Router() {
@@ -34,7 +35,7 @@ function Router() {
           <HomePage />
         </SignedIn>
         <SignedOut>
-          <AuthPage />
+          <LandingPage />
         </SignedOut>
       </Route>
       <Route path="/library/:childId">
