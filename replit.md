@@ -12,6 +12,10 @@ A comprehensive digital platform designed to help parents curate, manage, and en
 - **State Management**: TanStack Query for server state
 
 ## Recent Changes
+- **2025-10-01**: ✅ Added public landing page for unauthenticated users with featured books
+- **2025-10-01**: ✅ Created `/api/books/featured` public endpoint for fetching children's books
+- **2025-10-01**: ✅ Updated auth middleware to allow public access to featured books endpoint
+- **2025-10-01**: ✅ Fixed camera staying active after closing ISBN scanner dialog
 - **2025-01-28**: ✅ Successfully updated book thumbnails to use `object-contain` instead of `object-cover`
 - **2025-01-28**: ✅ Modified `client/src/components/book-card.tsx` to show full images without cropping
 - **2025-01-28**: ✅ Created demonstration file at `/thumbnail-test.html` showing before/after comparison
@@ -27,9 +31,11 @@ A comprehensive digital platform designed to help parents curate, manage, and en
 - Container sizes should remain consistent regardless of image dimensions
 
 ## Key Features
+- Public landing page with featured children's books for unauthenticated users
 - Child profile management
 - Book library and wishlist management
 - Book recommendations and search
+- ISBN barcode scanning for quick book addition
 - Rating and review system
 - Privacy settings for user profiles
 
