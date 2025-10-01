@@ -1,13 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { BrowserCodeReader } from '@zxing/browser';
-import { NotFoundException } from '@zxing/library';
-import { searchBookByIsbn, BookSearchResult } from '@/lib/book-api';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Camera, CameraOff, Loader2, CheckCircle } from 'lucide-react';
-import { BookCard } from './book-card';
+import { useState, useRef, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { BrowserMultiFormatReader } from "@zxing/browser";
+import { NotFoundException } from "@zxing/library";
+import { searchBookByIsbn, BookSearchResult } from "@/lib/book-api";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Camera, CameraOff, Loader2, CheckCircle } from "lucide-react";
+import { BookCard } from "./book-card";
 
 interface IsbnScannerProps {
   onBookFound?: (book: BookSearchResult) => void;
@@ -15,36 +15,42 @@ interface IsbnScannerProps {
   onAddToWishlist?: (book: BookSearchResult) => void;
 }
 
-export function IsbnScanner({ onBookFound, onAddToLibrary, onAddToWishlist }: IsbnScannerProps) {
+export function IsbnScanner({
+  onBookFound,
+  onAddToLibrary,
+  onAddToWishlist,
+}: IsbnScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scannedBook, setScannedBook] = useState<BookSearchResult | null>(null);
   const [lastScannedIsbn, setLastScannedIsbn] = useState<string | null>(null);
-  
+
   const videoRef = useRef<HTMLVideoElement>(null);
-  const codeReaderRef = useRef<BrowserCodeReader | null>(null);
-  
+  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const lastScannedIsbnRef = useRef<string | null>(null);
+
   // Mutation for searching book by ISBN
   const searchMutation = useMutation({
     mutationFn: async (isbn: string) => {
-      console.log('Searching for ISBN:', isbn);
+      console.log("Searching for ISBN:", isbn);
       const book = await searchBookByIsbn(isbn);
       if (!book) {
-        throw new Error('Book not found');
+        throw new Error("Book not found");
       }
       return book;
     },
     onSuccess: (book) => {
-      console.log('Book found:', book);
+      console.log("Book found:", book);
       setScannedBook(book);
       setError(null);
       onBookFound?.(book);
     },
     onError: (error) => {
-      console.error('Error finding book:', error);
-      setError('Book not found. Try scanning again or search manually.');
-    }
+      console.error("Error finding book:", error);
+      setError("Book not found. Try scanning again or search manually.");
+    },
   });
 
   // Initialize camera and barcode reader
@@ -53,81 +59,125 @@ export function IsbnScanner({ onBookFound, onAddToLibrary, onAddToWishlist }: Is
       setError(null);
       setScannedBook(null);
       setLastScannedIsbn(null);
-      
+
       // Request camera permission
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: 'environment', // Use back camera if available
+          facingMode: "environment", // Use back camera if available
           width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
+          height: { ideal: 720 },
+        },
       });
-      
+
       setHasPermission(true);
+      streamRef.current = stream;
       setIsScanning(true);
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        try {
-          await videoRef.current.play();
-        } catch (playError) {
-          console.error('Error playing video:', playError);
-        }
-      }
-      
-      // Initialize barcode reader
-      const codeReader = new BrowserCodeReader();
-      codeReaderRef.current = codeReader;
-      
-      // Start scanning
-      if (videoRef.current) {
-        codeReader.decodeFromVideoDevice(undefined, videoRef.current, (result, error) => {
-          if (result) {
-            const scannedText = result.getText();
-            console.log('Scanned:', scannedText);
-            
-            // Check if it's an ISBN (10 or 13 digits, possibly with hyphens)
-            const isbnPattern = /^(?:\d{9}[\dX]|\d{13})$/;
-            const cleanedText = scannedText.replace(/[-\s]/g, '');
-            
-            if (isbnPattern.test(cleanedText) && cleanedText !== lastScannedIsbn) {
-              setLastScannedIsbn(cleanedText);
-              searchMutation.mutate(cleanedText);
-            }
-          }
-          
-          if (error && !(error instanceof NotFoundException)) {
-            console.error('Scanning error:', error);
-          }
-        });
-      }
-      
     } catch (err) {
-      console.error('Camera error:', err);
+      console.error("Camera error:", err);
       setHasPermission(false);
-      setError('Unable to access camera. Please check permissions.');
+      setError("Unable to access camera. Please check permissions.");
     }
   };
+
+  useEffect(() => {
+    lastScannedIsbnRef.current = lastScannedIsbn;
+  }, [lastScannedIsbn]);
+
+  useEffect(() => {
+    if (!isScanning) {
+      return;
+    }
+
+    const video = videoRef.current;
+    const stream = streamRef.current;
+
+    if (!video || !stream) {
+      return;
+    }
+
+    video.srcObject = stream;
+
+    const playPromise = video.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch((playError) => {
+        console.error("Error playing video:", playError);
+      });
+    }
+
+    const codeReader = new BrowserMultiFormatReader();
+    codeReaderRef.current = codeReader;
+
+    codeReader.decodeFromVideoDevice(undefined, video, (result, error) => {
+      if (result) {
+        const scannedText = result.getText();
+        console.log("Scanned:", scannedText);
+
+        const isbnPattern = /^(?:\d{9}[\dX]|\d{13})$/;
+        const cleanedText = scannedText.replace(/[-\s]/g, "");
+
+        if (
+          isbnPattern.test(cleanedText) &&
+          cleanedText !== lastScannedIsbnRef.current
+        ) {
+          setLastScannedIsbn(cleanedText);
+          searchMutation.mutate(cleanedText);
+        }
+      }
+
+      if (error && !(error instanceof NotFoundException)) {
+        console.error("Scanning error:", error);
+      }
+    });
+
+    return () => {
+      if (typeof codeReader.reset === "function") {
+        codeReader.reset();
+      } else if (
+        typeof (codeReader as any).stopContinuousDecode === "function"
+      ) {
+        (codeReader as any).stopContinuousDecode();
+      }
+    };
+  }, [isScanning, searchMutation]);
 
   // Stop scanning and cleanup
   const stopScanning = () => {
     setIsScanning(false);
-    
+
     // Stop the barcode reader
     if (codeReaderRef.current) {
       try {
-        // Try to stop the reader gracefully
-        codeReaderRef.current = null;
+        if (typeof codeReaderRef.current.reset === "function") {
+          codeReaderRef.current.reset();
+        } else if (
+          typeof (
+            codeReaderRef.current as unknown as {
+              stopContinuousDecode?: () => void;
+            }
+          ).stopContinuousDecode === "function"
+        ) {
+          (
+            codeReaderRef.current as unknown as {
+              stopContinuousDecode: () => void;
+            }
+          ).stopContinuousDecode();
+        }
       } catch (err) {
-        console.error('Error stopping code reader:', err);
+        console.error("Error stopping code reader:", err);
       }
+      codeReaderRef.current = null;
     }
-    
+
     // Stop camera stream
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach((track) => track.stop());
       videoRef.current.srcObject = null;
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
   };
 
@@ -186,7 +236,8 @@ export function IsbnScanner({ onBookFound, onAddToLibrary, onAddToWishlist }: Is
       {hasPermission === false && (
         <Alert variant="destructive" data-testid="alert-permission">
           <AlertDescription>
-            Camera access denied. Please enable camera permissions and refresh the page.
+            Camera access denied. Please enable camera permissions and refresh
+            the page.
           </AlertDescription>
         </Alert>
       )}
@@ -223,7 +274,8 @@ export function IsbnScanner({ onBookFound, onAddToLibrary, onAddToWishlist }: Is
         <Card data-testid="card-instructions">
           <CardContent className="p-4 text-center">
             <p className="text-sm text-neutral-600">
-              Position the book's barcode within the camera view. The scanner will automatically detect ISBN codes.
+              Position the book's barcode within the camera view. The scanner
+              will automatically detect ISBN codes.
             </p>
           </CardContent>
         </Card>
@@ -232,19 +284,24 @@ export function IsbnScanner({ onBookFound, onAddToLibrary, onAddToWishlist }: Is
       {/* Success and Book Display */}
       {scannedBook && (
         <div className="space-y-4" data-testid="section-scanned-book">
-          <Alert className="border-green-200 bg-green-50" data-testid="alert-success">
+          <Alert
+            className="border-green-200 bg-green-50"
+            data-testid="alert-success"
+          >
             <CheckCircle className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-800">
               Book found! ISBN: {lastScannedIsbn}
             </AlertDescription>
           </Alert>
-          
+
           <div className="flex justify-center">
             <BookCard
               book={scannedBook}
               view="recommendation"
               onAddToLibrary={onAddToLibrary ? handleAddToLibrary : undefined}
-              onAddToWishlist={onAddToWishlist ? handleAddToWishlist : undefined}
+              onAddToWishlist={
+                onAddToWishlist ? handleAddToWishlist : undefined
+              }
               actionLabel="Add to Library"
               data-testid="card-scanned-book"
             />
