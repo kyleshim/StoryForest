@@ -33,7 +33,11 @@ export function setupAuth(app: Express) {
   // Use Clerk's middleware to require auth for API routes (excluding public endpoints)
   app.use("/api", (req, res, next) => {
     // Skip auth for public endpoints using originalUrl to get full path
-    if (req.originalUrl.startsWith('/api/test/') || req.originalUrl.startsWith('/api/books/featured')) {
+    if (
+      req.originalUrl.startsWith('/api/test/') || 
+      req.originalUrl.startsWith('/api/books/featured') ||
+      req.originalUrl.startsWith('/api/public/')
+    ) {
       return next();
     }
     // Apply Clerk auth for all other API routes

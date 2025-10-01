@@ -61,6 +61,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public endpoint for book search (no auth required)
+  app.get("/api/public/books/search", async (req, res) => {
+    try {
+      const query = req.query.q as string;
+      
+      if (!query) {
+        return res.status(400).json({ error: "Search query is required" });
+      }
+      
+      const response = await axios.get('https://www.googleapis.com/books/v1/volumes', {
+        params: {
+          q: query,
+          maxResults: 20,
+          printType: 'books',
+          orderBy: 'relevance'
+        }
+      });
+
+      const books = response.data.items ? response.data.items.map((item: any) => {
+        const volumeInfo = item.volumeInfo || {};
+        
+        let coverUrl = '';
+        if (volumeInfo.imageLinks) {
+          coverUrl = volumeInfo.imageLinks.thumbnail || volumeInfo.imageLinks.smallThumbnail || '';
+          coverUrl = coverUrl.replace('http://', 'https://');
+        }
+        
+        let isbn = '';
+        if (volumeInfo.industryIdentifiers && volumeInfo.industryIdentifiers.length > 0) {
+          const isbnObj = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_13') || 
+                        volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10') ||
+                        volumeInfo.industryIdentifiers[0];
+          isbn = isbnObj.identifier;
+        }
+        
+        return {
+          googleId: item.id,
+          title: volumeInfo.title || 'Unknown Title',
+          author: volumeInfo.authors ? volumeInfo.authors.join(', ') : 'Unknown Author',
+          coverUrl,
+          isbn,
+          ageRange: '',
+          description: volumeInfo.description || '',
+          publishedDate: volumeInfo.publishedDate || '',
+          olid: item.id
+        };
+      }) : [];
+      
+      res.json(books);
+    } catch (error) {
+      console.error('Google Books API error:', error);
+      res.status(500).json({ error: "Failed to search books" });
+    }
+  });
+
+  // Public endpoint for ISBN search (no auth required)
+  app.get("/api/public/books/isbn/:isbn", async (req, res) => {
+    try {
+      const isbn = req.params.isbn;
+      
+      if (!isbn) {
+        return res.status(400).json({ error: "ISBN is required" });
+      }
+      
+      const cleanedIsbn = isbn.replace(/[^0-9X]/gi, '');
+      
+      const response = await axios.get('https://www.googleapis.com/books/v1/volumes', {
+        params: {
+          q: `isbn:${cleanedIsbn}`,
+          maxResults: 5,
+          printType: 'books'
+        }
+      });
+
+      const books = response.data.items ? response.data.items.map((item: any) => {
+        const volumeInfo = item.volumeInfo || {};
+        
+        let coverUrl = '';
+        if (volumeInfo.imageLinks) {
+          coverUrl = volumeInfo.imageLinks.thumbnail || volumeInfo.imageLinks.smallThumbnail || '';
+          coverUrl = coverUrl.replace('http://', 'https://');
+        }
+        
+        let bookIsbn = '';
+        if (volumeInfo.industryIdentifiers && volumeInfo.industryIdentifiers.length > 0) {
+          const isbnObj = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_13') || 
+                        volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10') ||
+                        volumeInfo.industryIdentifiers[0];
+          bookIsbn = isbnObj.identifier;
+        }
+        
+        return {
+          googleId: item.id,
+          title: volumeInfo.title || 'Unknown Title',
+          author: volumeInfo.authors ? volumeInfo.authors.join(', ') : 'Unknown Author',
+          coverUrl,
+          isbn: bookIsbn,
+          ageRange: '',
+          description: volumeInfo.description || '',
+          publishedDate: volumeInfo.publishedDate || '',
+          olid: item.id
+        };
+      }) : [];
+      
+      if (books.length === 0) {
+        return res.status(404).json({ error: "No books found for this ISBN" });
+      }
+      
+      res.json(books[0]);
+    } catch (error) {
+      console.error('Google Books API error:', error);
+      res.status(500).json({ error: "Failed to search book by ISBN" });
+    }
+  });
+
   // Set up authentication routes
   setupAuth(app);
   

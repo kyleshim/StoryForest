@@ -1,11 +1,17 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SignInButton, SignUpButton } from "@clerk/clerk-react";
-import { BookOpen, Library, Heart, Star } from "lucide-react";
+import { BookOpen, Library, Heart, Star, Search, Camera } from "lucide-react";
 import { BookSearchResult } from "@/lib/book-api";
+import { PublicBookSearch } from "@/components/public-book-search";
+import { PublicIsbnScanner } from "@/components/public-isbn-scanner";
 
 export default function LandingPage() {
+  const [searchTab, setSearchTab] = useState("search");
+
   const { data: featuredBooks, isLoading } = useQuery<BookSearchResult[]>({
     queryKey: ["/api/books/featured"],
   });
@@ -82,6 +88,40 @@ export default function LandingPage() {
               <p className="text-gray-600 dark:text-gray-300 text-center">
                 Discover age-appropriate books tailored to your child's interests
               </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Search Section */}
+        <div className="mb-16">
+          <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-4">
+            Try It Out
+          </h2>
+          <p className="text-center text-gray-600 dark:text-gray-300 mb-8">
+            Search for books or scan an ISBN to see what you can do
+          </p>
+          <Card className="max-w-4xl mx-auto">
+            <CardContent className="p-6">
+              <Tabs value={searchTab} onValueChange={setSearchTab}>
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="search" className="gap-2" data-testid="tab-search">
+                    <Search className="h-4 w-4" />
+                    Search Books
+                  </TabsTrigger>
+                  <TabsTrigger value="scanner" className="gap-2" data-testid="tab-scanner">
+                    <Camera className="h-4 w-4" />
+                    Scan ISBN
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="search">
+                  <PublicBookSearch />
+                </TabsContent>
+                
+                <TabsContent value="scanner">
+                  <PublicIsbnScanner />
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </div>
