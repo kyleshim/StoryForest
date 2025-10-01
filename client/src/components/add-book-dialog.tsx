@@ -132,10 +132,12 @@ export function AddBookDialog({ childId, childAge = 3, onAddBook, trigger }: Add
           </TabsContent>
           
           <TabsContent value="scanner" className="mt-4">
-            <IsbnScanner 
-              onAddToLibrary={handleAddBook}
-              onAddToWishlist={handleAddToWishlist}
-            />
+            {activeTab === 'scanner' && (
+              <IsbnScanner 
+                onAddToLibrary={handleAddBook}
+                onAddToWishlist={handleAddToWishlist}
+              />
+            )}
           </TabsContent>
           
           <TabsContent value="recommendations" className="mt-4">

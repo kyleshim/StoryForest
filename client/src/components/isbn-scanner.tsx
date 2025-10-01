@@ -45,6 +45,7 @@ export function IsbnScanner({
       console.log("Book found:", book);
       setScannedBook(book);
       setError(null);
+      stopScanning();
       onBookFound?.(book);
     },
     onError: (error) => {
@@ -130,12 +131,10 @@ export function IsbnScanner({
     });
 
     return () => {
-      if (typeof codeReader.reset === "function") {
-        codeReader.reset();
-      } else if (
-        typeof (codeReader as any).stopContinuousDecode === "function"
-      ) {
-        (codeReader as any).stopContinuousDecode();
+      try {
+        (codeReader as any).reset();
+      } catch (err) {
+        console.error("Error stopping code reader:", err);
       }
     };
   }, [isScanning, searchMutation]);
@@ -147,21 +146,7 @@ export function IsbnScanner({
     // Stop the barcode reader
     if (codeReaderRef.current) {
       try {
-        if (typeof codeReaderRef.current.reset === "function") {
-          codeReaderRef.current.reset();
-        } else if (
-          typeof (
-            codeReaderRef.current as unknown as {
-              stopContinuousDecode?: () => void;
-            }
-          ).stopContinuousDecode === "function"
-        ) {
-          (
-            codeReaderRef.current as unknown as {
-              stopContinuousDecode: () => void;
-            }
-          ).stopContinuousDecode();
-        }
+        (codeReaderRef.current as any).reset();
       } catch (err) {
         console.error("Error stopping code reader:", err);
       }
