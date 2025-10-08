@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { BrowserMultiFormatReader } from "@zxing/browser";
+import { BrowserMultiFormatReader, IScannerControls } from "@zxing/browser";
 import { NotFoundException } from "@zxing/library";
 import { searchBookByIsbn, BookSearchResult } from "@/lib/book-api";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ export function IsbnScanner({
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
+  const scannerControlsRef = useRef<IScannerControls | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const lastScannedIsbnRef = useRef<string | null>(null);
 
@@ -108,34 +109,52 @@ export function IsbnScanner({
     const codeReader = new BrowserMultiFormatReader();
     codeReaderRef.current = codeReader;
 
-    codeReader.decodeFromVideoDevice(undefined, video, (result, error) => {
-      if (result) {
-        const scannedText = result.getText();
-        console.log("Scanned:", scannedText);
+    let isCancelled = false;
 
-        const isbnPattern = /^(?:\d{9}[\dX]|\d{13})$/;
-        const cleanedText = scannedText.replace(/[-\s]/g, "");
+    codeReader
+      .decodeFromVideoDevice(undefined, video, (result, error) => {
+        if (result) {
+          const scannedText = result.getText();
+          console.log("Scanned:", scannedText);
 
-        if (
-          isbnPattern.test(cleanedText) &&
-          cleanedText !== lastScannedIsbnRef.current
-        ) {
-          setLastScannedIsbn(cleanedText);
-          searchMutation.mutate(cleanedText);
+          const isbnPattern = /^(?:\d{9}[\dX]|\d{13})$/;
+          const cleanedText = scannedText.replace(/[-\s]/g, "");
+
+          if (
+            isbnPattern.test(cleanedText) &&
+            cleanedText !== lastScannedIsbnRef.current
+          ) {
+            setLastScannedIsbn(cleanedText);
+            searchMutation.mutate(cleanedText);
+          }
         }
-      }
 
-      if (error && !(error instanceof NotFoundException)) {
-        console.error("Scanning error:", error);
-      }
-    });
+        if (error && !(error instanceof NotFoundException)) {
+          console.error("Scanning error:", error);
+        }
+      })
+      .then((controls) => {
+        if (isCancelled) {
+          controls.stop();
+          return;
+        }
+        scannerControlsRef.current = controls;
+      })
+      .catch((err) => {
+        console.error("Error initializing code reader:", err);
+      });
 
     return () => {
-      try {
-        (codeReader as any).reset();
-      } catch (err) {
-        console.error("Error stopping code reader:", err);
+      isCancelled = true;
+      if (scannerControlsRef.current) {
+        try {
+          scannerControlsRef.current.stop();
+        } catch (err) {
+          console.error("Error stopping scanner controls:", err);
+        }
+        scannerControlsRef.current = null;
       }
+      codeReaderRef.current = null;
     };
   }, [isScanning, searchMutation]);
 
@@ -143,10 +162,21 @@ export function IsbnScanner({
   const stopScanning = () => {
     setIsScanning(false);
 
-    // Stop the barcode reader
+    if (scannerControlsRef.current) {
+      try {
+        scannerControlsRef.current.stop();
+      } catch (err) {
+        console.error("Error stopping scanner controls:", err);
+      }
+      scannerControlsRef.current = null;
+    }
+
     if (codeReaderRef.current) {
       try {
-        (codeReaderRef.current as any).reset();
+        const reader = codeReaderRef.current as unknown as {
+          reset?: () => void;
+        };
+        reader.reset?.();
       } catch (err) {
         console.error("Error stopping code reader:", err);
       }
