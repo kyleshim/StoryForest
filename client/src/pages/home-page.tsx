@@ -1,9 +1,7 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import { MainLayout } from '@/components/main-layout';
-import { Button } from '@/components/ui/button';
 import { Loader2, Plus } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
 import { useState } from 'react';
 import { 
@@ -15,14 +13,12 @@ import {
 } from '@/components/ui/dialog';
 import { ChildCard } from '@/components/child-card';
 import { ChildForm } from '@/components/child-form';
-import { GardenHeader } from '@/components/garden-header';
 import { StatPill, GardenButton } from '@/components/garden-components';
 import { Sprout, Bee } from '@/components/garden-icons';
 import type { ChildWithStats } from '@shared/schema';
 
 export default function HomePage() {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [, navigate] = useLocation();
   const [addChildOpen, setAddChildOpen] = useState(false);
 
@@ -48,7 +44,6 @@ export default function HomePage() {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <GardenHeader />
         
         {/* Welcome section */}
         <div className="rounded-2xl border border-green-200 bg-white/70 backdrop-blur p-6 shadow">
