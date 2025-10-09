@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SignUpButton } from "@clerk/clerk-react";
+import { SignUpButton, useClerk } from "@clerk/clerk-react";
 import { BookOpen, Library, Heart, Star, Search, Camera } from "lucide-react";
 import { BookSearchResult } from "@/lib/book-api";
 import { PublicBookSearch } from "@/components/public-book-search";
@@ -11,6 +11,7 @@ import { PublicIsbnScanner } from "@/components/public-isbn-scanner";
 
 export default function LandingPage() {
   const [searchTab, setSearchTab] = useState("search");
+  const { openSignIn } = useClerk();
 
   const { data: featuredBooks, isLoading } = useQuery<BookSearchResult[]>({
     queryKey: ["/api/books/featured"],
@@ -24,15 +25,15 @@ export default function LandingPage() {
             <span className="text-2xl font-semibold text-blue-900 dark:text-blue-100">Story Forest</span>
           </div>
           <div className="flex items-center justify-end gap-3">
-            <SignInButton mode="modal">
-              <Button
-                variant="outline"
-                className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                data-testid="button-login-header"
-              >
-                Log In
-              </Button>
-            </SignInButton>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-blue-200 text-blue-700 hover:bg-blue-50"
+              data-testid="button-login-header"
+              onClick={() => openSignIn({})}
+            >
+              Log In
+            </Button>
             <SignUpButton mode="modal">
               <Button className="bg-blue-600 text-white hover:bg-blue-700" data-testid="button-signup-header">
                 Sign Up
