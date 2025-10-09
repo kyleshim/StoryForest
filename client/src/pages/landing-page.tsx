@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SignInButton, SignUpButton } from "@clerk/clerk-react";
+import { SignUpButton } from "@clerk/clerk-react";
 import { BookOpen, Library, Heart, Star, Search, Camera } from "lucide-react";
 import { BookSearchResult } from "@/lib/book-api";
 import { PublicBookSearch } from "@/components/public-book-search";
@@ -19,27 +19,6 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-4 py-16">
-        <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-16">
-          <div className="text-center md:text-left">
-            <span className="inline-flex items-center justify-center rounded-full bg-blue-100 text-blue-700 px-4 py-1 text-sm font-medium mb-3">
-              Welcome to Story Forest
-            </span>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-3">
-              A playful library for little readers
-            </h1>
-            <p className="text-gray-600 dark:text-gray-300 max-w-2xl">
-              Discover, organize, and share the stories your family loves with a cozy garden-inspired experience.
-            </p>
-          </div>
-          <div className="flex justify-center md:justify-end">
-            <SignInButton mode="modal">
-              <Button size="lg" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50" data-testid="button-login-header">
-                Log In
-              </Button>
-            </SignInButton>
-          </div>
-        </header>
-
         {/* Features Section */}
         <div className="grid md:grid-cols-3 gap-8 mb-16">
           <Card>
