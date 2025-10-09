@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SignInButton, SignUpButton } from "@clerk/clerk-react";
+import { SignUpButton } from "@clerk/clerk-react";
 import { BookOpen, Library, Heart, Star, Search, Camera } from "lucide-react";
 import { BookSearchResult } from "@/lib/book-api";
 import { PublicBookSearch } from "@/components/public-book-search";
@@ -18,35 +18,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-gray-800">
-      {/* Hero Section */}
       <div className="container mx-auto px-4 py-16">
-        <div className="text-center max-w-4xl mx-auto mb-16">
-          <div className="flex justify-center mb-6">
-            <div className="bg-blue-100 dark:bg-blue-900 p-4 rounded-full">
-              <BookOpen className="h-12 w-12 text-blue-600 dark:text-blue-400" />
-            </div>
-          </div>
-          <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">
-            StoryForest
-          </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-            Curate, manage, and enhance your children's reading journey
-          </p>
-          <div className="flex gap-4 justify-center">
-            <SignUpButton mode="modal">
-              <Button size="lg" className="gap-2" data-testid="button-signup">
-                <Star className="h-5 w-5" />
-                Get Started Free
-              </Button>
-            </SignUpButton>
-            <SignInButton mode="modal">
-              <Button size="lg" variant="outline" data-testid="button-signin">
-                Sign In
-              </Button>
-            </SignInButton>
-          </div>
-        </div>
-
         {/* Features Section */}
         <div className="grid md:grid-cols-3 gap-8 mb-16">
           <Card>
