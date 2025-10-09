@@ -145,7 +145,7 @@ function Header() {
           <div className="flex items-center gap-3">
             <Barn />
             <h1 className="text-2xl md:text-3xl font-extrabold text-green-900 tracking-tight">
-              Reading Roots
+              Story Forest
             </h1>
           </div>
           <p className="mt-1 text-green-800/90 max-w-xl">
