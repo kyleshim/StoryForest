@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SignInButton, SignUpButton } from "@clerk/clerk-react";
+import { SignUpButton } from "@clerk/clerk-react";
 import { BookOpen, Library, Heart, Star, Search, Camera } from "lucide-react";
 import { BookSearchResult } from "@/lib/book-api";
 import { PublicBookSearch } from "@/components/public-book-search";
