@@ -18,34 +18,44 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-gray-800">
-      {/* Hero Section */}
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center max-w-4xl mx-auto mb-16">
-          <div className="flex justify-center mb-6">
-            <div className="bg-blue-100 dark:bg-blue-900 p-4 rounded-full">
-              <BookOpen className="h-12 w-12 text-blue-600 dark:text-blue-400" />
-            </div>
+      <header className="border-b border-blue-100/60 bg-white/70 backdrop-blur-sm dark:bg-gray-900/70">
+        <div className="container mx-auto flex flex-col gap-3 px-4 py-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center justify-between gap-3 md:justify-start">
+            <span className="text-2xl font-semibold text-blue-900 dark:text-blue-100">Story Forest</span>
           </div>
-          <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">
-            StoryForest
-          </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-            Curate, manage, and enhance your children's reading journey
-          </p>
-          <div className="flex gap-4 justify-center">
-            <SignUpButton mode="modal">
-              <Button size="lg" className="gap-2" data-testid="button-signup">
-                <Star className="h-5 w-5" />
-                Get Started Free
-              </Button>
-            </SignUpButton>
+          <div className="flex items-center justify-end gap-3">
             <SignInButton mode="modal">
-              <Button size="lg" variant="outline" data-testid="button-signin">
-                Sign In
+              <Button
+                variant="outline"
+                className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                data-testid="button-login-header"
+              >
+                Log In
               </Button>
             </SignInButton>
+            <SignUpButton mode="modal">
+              <Button className="bg-blue-600 text-white hover:bg-blue-700" data-testid="button-signup-header">
+                Sign Up
+              </Button>
+            </SignUpButton>
           </div>
         </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-16">
+        <section className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between mb-16">
+          <div className="text-center md:text-left">
+            <span className="inline-flex items-center justify-center rounded-full bg-blue-100 text-blue-700 px-4 py-1 text-sm font-medium mb-3">
+              Welcome to Story Forest
+            </span>
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-3">
+              A playful library for little readers
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300 max-w-2xl">
+              Discover, organize, and share the stories your family loves with a cozy garden-inspired experience.
+            </p>
+          </div>
+        </section>
 
         {/* Features Section */}
         <div className="grid md:grid-cols-3 gap-8 mb-16">
@@ -187,7 +197,7 @@ export default function LandingPage() {
             </Button>
           </SignUpButton>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

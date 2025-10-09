@@ -32,7 +32,7 @@ export function Header() {
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <div className="flex items-center space-x-3">
           <Barn className="w-8 h-8" />
-          <h1 className="font-heading font-bold text-xl text-green-900">Reading Roots</h1>
+          <h1 className="font-heading font-bold text-xl text-green-900">Story Forest</h1>
         </div>
         
         <div className="flex items-center space-x-4">
