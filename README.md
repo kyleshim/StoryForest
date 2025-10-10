@@ -45,6 +45,35 @@ Key integrations include Clerk for identity, Neon/Postgres accessed through Driz
    ```
    The script syncs the Drizzle schema to your Postgres instance.【F:package.json†L6-L12】【F:shared/schema.ts†L5-L137】
 
+### Loading demo content for previews or screenshots
+
+Because StoryForest relies on Clerk-authenticated users and a Postgres database, the UI renders empty states until you've created a reader and attached books. Use the seeding helper below to stand up a demo library and wishlist that match the redesigned cards:
+
+1. **Provision your environment variables** – create a `.env` file in the project root (or export variables in your shell) with at least:
+   ```bash
+   DATABASE_URL="postgres://..."   # Local or hosted Postgres connection string
+   SESSION_SECRET="replace-me"     # Any random string for dev cookies
+   VITE_CLERK_PUBLISHABLE_KEY="pk_test_..."
+   CLERK_SECRET_KEY="sk_test_..."
+   ```
+   Clerk dev keys are available from your dashboard. When using a `.env` file, Vite will automatically load the `VITE_` prefixed values for the client.【F:client/src/main.tsx†L9-L20】
+
+2. **Create a Clerk test user** – from the Clerk dashboard or via `clerk dev`, add a user account you can sign in with locally. Copy its `id` value (it looks like `user_2abc...`).
+
+3. **Push the schema** – make sure your database has the latest tables:
+   ```bash
+   npm run db:push
+   ```
+
+4. **Seed sample data** – export the Clerk user id so the records are associated with your account, then run the TypeScript seeder:
+   ```bash
+   export SEED_CLERK_ID="user_2abc123"
+   npx tsx server/scripts/seed-sample-data.ts
+   ```
+   The script inserts two demo readers (Hazel and Theo) with a handful of books split between the library and wishlist so the redesigned tiles appear populated.【F:server/scripts/seed-sample-data.ts†L1-L173】
+
+5. **Launch the app and sign in** – start the dev server with `npm run dev`, open `http://localhost:5000`, and authenticate with the same Clerk user. The library and wishlist pages will now render the seeded content, letting you capture screenshots of the new layouts.【F:server/index.ts†L54-L74】【F:client/src/pages/library-page.tsx†L54-L200】【F:client/src/pages/wishlist-page.tsx†L42-L185】
+
 ## Project Structure
 
 ```

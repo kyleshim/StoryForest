@@ -199,22 +199,22 @@ export default function WishlistPage() {
           <div className="mb-6 flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-700 h-4 w-4" />
-              <Input 
-                type="text" 
-                placeholder="Search your wishlist..." 
-                className="w-full pl-10 pr-4 py-2"
+              <Input
+                type="text"
+                placeholder="Search your wishlist..."
+                className="w-full rounded-full border-none bg-white/90 pl-10 pr-4 py-3 shadow-sm focus-visible:ring-emerald-400"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
-          
+
           {isWishlistLoading ? (
             <div className="flex justify-center p-12">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
             </div>
           ) : filteredBooks.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-10">
+            <div className="grid auto-rows-[1fr] grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 mb-10">
               {filteredBooks.map((book: Book) => (
                 <BookCard
                   key={book.id}
