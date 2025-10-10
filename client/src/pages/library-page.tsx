@@ -256,17 +256,17 @@ export default function LibraryPage() {
           <div className="mb-6 flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-700 h-4 w-4" />
-              <Input 
-                type="text" 
-                placeholder="Search for books, authors..." 
-                className="w-full pl-10 pr-4 py-2"
+              <Input
+                type="text"
+                placeholder="Search for books, authors..."
+                className="w-full rounded-full border-none bg-white/90 pl-10 pr-4 py-3 shadow-sm focus-visible:ring-emerald-400"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <div className="flex gap-2">
               <Select value={sortOption} onValueChange={setSortOption}>
-                <SelectTrigger className="bg-white border border-neutral-200 rounded-lg px-4 min-w-[140px]">
+                <SelectTrigger className="min-w-[160px] rounded-full border-none bg-white/90 px-4 py-3 text-sm shadow-sm">
                   <div className="flex items-center gap-2">
                     <SortDesc className="h-4 w-4 text-neutral-700" />
                     <SelectValue placeholder="Sort by" />
@@ -288,7 +288,7 @@ export default function LibraryPage() {
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
             </div>
           ) : filteredBooks.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-10">
+            <div className="grid auto-rows-[1fr] grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 mb-10">
               {filteredBooks.map((book) => (
                 <BookCard
                   key={book.id}
