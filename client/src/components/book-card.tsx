@@ -97,23 +97,23 @@ export function BookCard({
           </TooltipProvider>
         </div>
 
-        <div className="mt-6 flex flex-1 flex-col items-center justify-center">
-          <div className="relative flex h-28 w-28 items-center justify-center rounded-2xl bg-white/10 shadow-inner backdrop-blur-sm">
+        <div className="mt-4 flex flex-1 flex-col items-center justify-center">
+          <div className="relative flex h-32 w-24 items-center justify-center rounded-2xl bg-white/15 p-1.5 shadow-inner backdrop-blur-sm">
             <img
               src={book.coverUrl || 'https://via.placeholder.com/200x300?text=No+Cover'}
               alt={book.title}
-              className="h-24 w-16 rounded-xl object-cover shadow-lg"
+              className="h-full w-full rounded-xl object-cover shadow-lg"
               onError={(e) => {
                 e.currentTarget.src = 'https://via.placeholder.com/200x300?text=No+Cover';
               }}
             />
-            <div className="pointer-events-none absolute -right-6 -top-3 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100">
+            <div className="pointer-events-none absolute -right-5 -top-3 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100">
               <Bee />
             </div>
           </div>
         </div>
 
-        <div className="mt-6">
+        <div className="mt-4">
           <h3 className="font-heading text-base font-semibold leading-tight line-clamp-2" title={book.title}>
             {book.title}
           </h3>
@@ -123,7 +123,7 @@ export function BookCard({
         </div>
       </div>
 
-      <div className="mt-6 flex items-center justify-between gap-2">
+      <div className="mt-5 flex items-center justify-between gap-2">
         {view === 'library' && onRate ? (
           <div className="flex gap-2">
             <button

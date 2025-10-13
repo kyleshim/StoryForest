@@ -288,7 +288,7 @@ export default function LibraryPage() {
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
             </div>
           ) : filteredBooks.length > 0 ? (
-            <div className="grid auto-rows-[1fr] grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 mb-10">
+            <div className="grid auto-rows-[1fr] grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 mb-10">
               {filteredBooks.map((book) => (
                 <BookCard
                   key={book.id}
