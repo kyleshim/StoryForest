@@ -58,39 +58,28 @@ export function ChildProfile({ child, className }: ChildProfileProps) {
   const joinDateString = `${birthMonthName} ${child.birthYear}`;
   
   return (
-    <div className={cn("flex flex-col sm:flex-row items-center gap-4 mb-8 bg-white rounded-xl p-4 shadow-sm", className)}>
-      <div className="relative">
-        <AvatarWithBadge
-          variant="secondary"
-          size="xl"
-          initial={child.name.charAt(0).toUpperCase()}
-          badgeText={age.toString()}
-          badgeVariant="accent"
-          badgeSize="lg"
-        />
-      </div>
-      
-      <div className="text-center sm:text-left">
-        <h2 className="font-heading font-bold text-2xl text-neutral-800">{child.name}'s Reading Journey</h2>
-        <p className="text-neutral-700">Building a library of adventures since {joinDateString}</p>
+    <div className={cn("relative mb-8 bg-white rounded-xl p-6 shadow-sm", className)}>
+      <div className="text-center">
+        <h2 className="font-heading font-bold text-3xl text-neutral-800 mb-2">{child.name}'s Reading Journey</h2>
+        <p className="text-neutral-600 mb-4">Building a library of adventures since {joinDateString}</p>
         
-        <div className="mt-2 flex flex-wrap justify-center sm:justify-start gap-2">
-          <Badge variant="outline" className="bg-primary/10 text-primary">
+        <div className="flex flex-wrap justify-center gap-2">
+          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 px-4 py-1.5">
             {child.libraryCount} Books
           </Badge>
-          <Badge variant="outline" className="bg-secondary/10 text-secondary">
+          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 px-4 py-1.5">
             {child.wishlistCount} Wishlist
           </Badge>
-          <Badge variant="outline" className="bg-accent/10 text-accent">
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 px-4 py-1.5">
             Age: {age} {age <= 1 ? 'year' : 'years'}
           </Badge>
-          <Badge variant="outline" className="bg-gray-100 text-neutral-700">
+          <Badge variant="outline" className="bg-gray-100 text-neutral-700 border-gray-200 px-4 py-1.5">
             Born: {birthMonthName} {child.birthYear}
           </Badge>
         </div>
       </div>
       
-      <div className="ml-auto mt-4 sm:mt-0">
+      <div className="absolute right-6 bottom-6">
         <AddBookDialog 
           childId={child.id}
           childAge={age}
