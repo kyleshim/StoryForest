@@ -344,23 +344,19 @@ export default function LibraryPage() {
                   <div className="flex gap-2 mt-4">
                     <Button
                       variant="destructive"
-                      disabled={!filteredBooks.find((b: Book) => b.id === bookDetail.id && b.inLibrary)}
                       onClick={async () => {
-                        await removeFromLibraryMutation.mutateAsync(bookDetail.id);
-                        setDetailOpen(false);
+                        const currentBook = filteredBooks.find((b: Book) => 
+                          (b.googleId && b.googleId === bookDetail.googleId) || 
+                          (b.olid && b.olid === bookDetail.olid)
+                        );
+                        if (currentBook) {
+                          await removeFromLibraryMutation.mutateAsync(currentBook.id);
+                          setDetailOpen(false);
+                        }
                       }}
+                      data-testid="button-remove-library-detail"
                     >
                       Remove from Library
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      disabled={!!filteredBooks.find((b: Book) => b.id === bookDetail.id && b.inWishlist)}
-                      onClick={async () => {
-                        await addToWishlistMutation.mutateAsync(bookDetail.id);
-                        setDetailOpen(false);
-                      }}
-                    >
-                      {filteredBooks.find((b: Book) => b.id === bookDetail.id && b.inWishlist) ? 'In Wishlist' : 'Add to Wishlist'}
                     </Button>
                   </div>
                 </div>
