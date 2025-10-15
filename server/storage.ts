@@ -148,8 +148,8 @@ export class DatabaseStorage implements IStorage {
         wishlistBooksQuery
       ]);
 
-      const libraryCount = libraryResult[0]?.count || 0;
-      const wishlistCount = wishlistResult[0]?.count || 0;
+      const libraryCount = Number(libraryResult[0]?.count) || 0;
+      const wishlistCount = Number(wishlistResult[0]?.count) || 0;
 
       return {
         ...child,
