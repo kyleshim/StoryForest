@@ -70,13 +70,19 @@ export default function WishlistPage() {
         olid: book.olid,
         ageRange: book.ageRange,
       });
+      
+      // Remove from wishlist after successfully adding to library
+      await apiRequest('DELETE', `/api/children/${parsedChildId}/wishlist/${bookId}`);
+      
+      return bookId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/children/${parsedChildId}/library`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/children/${parsedChildId}/wishlist`] });
       queryClient.invalidateQueries({ queryKey: [`/api/children/${parsedChildId}`] });
       toast({
         title: "Added to library",
-        description: "The book has been added to your library.",
+        description: "The book has been added to your library and removed from your wishlist.",
       });
     },
     onError: (error: any) => {
