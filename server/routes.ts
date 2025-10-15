@@ -208,6 +208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
+      console.error("Error creating child:", error);
       res.status(500).json({ error: "Server error" });
     }
   });
