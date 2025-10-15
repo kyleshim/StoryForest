@@ -162,6 +162,18 @@ export function BookCard({
                 <ThumbsDown className={cn('mx-auto h-4 w-4', rating === 'down' ? 'text-rose-600' : 'text-white')} />
               </button>
             </div>
+            {onRemoveFromLibrary && (
+              <button
+                className="w-full rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemoveFromLibrary();
+                }}
+                data-testid={`button-remove-library-${book.title.toLowerCase().replace(/\s+/g, '-')}`}
+              >
+                Remove from Library
+              </button>
+            )}
           </>
         ) : view === 'recommendation' ? (
           <button
