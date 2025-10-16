@@ -1,8 +1,6 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams, useLocation } from 'wouter';
 import { MainLayout } from '@/components/main-layout';
-import { ChildProfile } from '@/components/child-profile';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BookCard } from '@/components/book-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -26,10 +24,9 @@ import React, { ReactNode } from 'react';
 
 export default function LibraryPage() {
   const { childId } = useParams();
-  const parsedChildId = parseInt(childId);
+  const parsedChildId = parseInt(childId || '');
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('library');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState('recent');
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
@@ -224,35 +221,7 @@ export default function LibraryPage() {
 
   return (
     <MainLayout childId={parsedChildId}>
-      <ChildProfile child={child} />
-      
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <div className="border-b border-neutral-200 mb-6">
-          <TabsList className="flex space-x-8 bg-transparent border-0 p-0">
-            <TabsTrigger 
-              value="library" 
-              className={`py-3 px-1 ${activeTab === 'library' ? 'tab-active' : 'text-neutral-700'}`}
-            >
-              Library
-            </TabsTrigger>
-            <TabsTrigger 
-              value="wishlist" 
-              className={`py-3 px-1 ${activeTab === 'wishlist' ? 'tab-active' : 'text-neutral-700'}`}
-              onClick={() => navigate(`/wishlist/${parsedChildId}`)}
-            >
-              Wishlist
-            </TabsTrigger>
-            <TabsTrigger 
-              value="explore" 
-              className={`py-3 px-1 ${activeTab === 'explore' ? 'tab-active' : 'text-neutral-700'}`}
-              onClick={() => navigate('/explore')}
-            >
-              Explore
-            </TabsTrigger>
-          </TabsList>
-        </div>
-        
-        <TabsContent value="library" className="mt-0">
+      <div>
           <div className="mb-6 flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-700 h-4 w-4" />
@@ -365,8 +334,7 @@ export default function LibraryPage() {
               )}
             </DialogContent>
           </Dialog>
-        </TabsContent>
-      </Tabs>
+      </div>
     </MainLayout>
   );
 }

@@ -1,15 +1,12 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams, useLocation } from 'wouter';
 import { MainLayout } from '@/components/main-layout';
-import { ChildProfile } from '@/components/child-profile';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BookCard } from '@/components/book-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Loader2, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Recommendations } from '@/components/recommendations';
 import { ReadingStats } from '@/components/reading-stats';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -17,10 +14,9 @@ import { getBookById, BookDetailResult } from '@/lib/book-api';
 
 export default function WishlistPage() {
   const { childId } = useParams();
-  const parsedChildId = parseInt(childId);
+  const parsedChildId = parseInt(childId || '');
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('wishlist');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
   const [bookDetail, setBookDetail] = useState<BookDetailResult | null>(null);
@@ -173,35 +169,7 @@ export default function WishlistPage() {
 
   return (
     <MainLayout childId={parsedChildId}>
-      <ChildProfile child={child} />
-      
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <div className="border-b border-neutral-200 mb-6">
-          <TabsList className="flex space-x-8 bg-transparent border-0 p-0">
-            <TabsTrigger 
-              value="library" 
-              className={`py-3 px-1 ${activeTab === 'library' ? 'tab-active' : 'text-neutral-700'}`}
-              onClick={() => navigate(`/library/${parsedChildId}`)}
-            >
-              Library
-            </TabsTrigger>
-            <TabsTrigger 
-              value="wishlist" 
-              className={`py-3 px-1 ${activeTab === 'wishlist' ? 'tab-active' : 'text-neutral-700'}`}
-            >
-              Wishlist
-            </TabsTrigger>
-            <TabsTrigger 
-              value="explore" 
-              className={`py-3 px-1 ${activeTab === 'explore' ? 'tab-active' : 'text-neutral-700'}`}
-              onClick={() => navigate('/explore')}
-            >
-              Explore
-            </TabsTrigger>
-          </TabsList>
-        </div>
-        
-        <TabsContent value="wishlist" className="mt-0">
+      <div>
           <div className="mb-6 flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-700 h-4 w-4" />
@@ -252,9 +220,8 @@ export default function WishlistPage() {
           {child && (
             <ReadingStats child={child} />
           )}
-        </TabsContent>
-      </Tabs>
-      {/* Book Detail Dialog */}
+          
+          {/* Book Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -301,6 +268,7 @@ export default function WishlistPage() {
           )}
         </DialogContent>
       </Dialog>
+      </div>
     </MainLayout>
   );
 }
