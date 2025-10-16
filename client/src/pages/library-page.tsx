@@ -222,6 +222,7 @@ export default function LibraryPage() {
   return (
     <MainLayout childId={parsedChildId}>
       <div>
+          <h1 className="text-3xl font-heading font-bold text-neutral-800 mb-6">Library</h1>
           <div className="mb-6 flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-700 h-4 w-4" />

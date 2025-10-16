@@ -23,6 +23,20 @@ export default function WishlistPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
+  type Book = {
+    id: number;
+    googleId?: string;
+    olid?: string;
+    title: string;
+    author: string;
+    coverUrl?: string;
+    isbn?: string;
+    ageRange?: string;
+    inLibrary?: boolean;
+    inWishlist?: boolean;
+    rating?: string | null;
+  };
+
   const { data: child, isLoading: isChildLoading } = useQuery({
     queryKey: [`/api/children/${parsedChildId}`],
     queryFn: async () => {
@@ -115,26 +129,13 @@ export default function WishlistPage() {
   // Filter books by search query
   const filteredBooks = wishlistBooks
     ? wishlistBooks.filter(
-        book => searchQuery
+        (book: Book) => searchQuery
           ? book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             book.author.toLowerCase().includes(searchQuery.toLowerCase())
           : true
       )
     : [];
 
-  type Book = {
-    id: number;
-    googleId?: string;
-    olid?: string;
-    title: string;
-    author: string;
-    coverUrl?: string;
-    isbn?: string;
-    ageRange?: string;
-    inLibrary?: boolean;
-    inWishlist?: boolean;
-    rating?: string | null;
-  };
   const handleBookClick = async (book: Book) => {
     setSelectedBookId(book.googleId || book.olid || book.id.toString());
     setLoadingDetail(true);
@@ -170,6 +171,7 @@ export default function WishlistPage() {
   return (
     <MainLayout childId={parsedChildId}>
       <div>
+          <h1 className="text-3xl font-heading font-bold text-neutral-800 mb-6">Wishlist</h1>
           <div className="mb-6 flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-700 h-4 w-4" />

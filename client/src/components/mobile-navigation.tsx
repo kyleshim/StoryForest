@@ -38,21 +38,23 @@ export function MobileNavigation({ childId }: MobileNavigationProps) {
   ];
 
   return (
-    <nav className="md:hidden bg-white border-t border-neutral-200 py-2 px-6 fixed bottom-0 left-0 right-0 z-10">
-      <div className="flex justify-around">
+    <nav className="md:hidden bg-white border-t border-neutral-200 py-3 px-6 fixed bottom-0 left-0 right-0 z-10">
+      <div className="flex justify-around items-center">
         {navItems.map((item) => (
           <Link key={item.label} href={item.href}>
-            <a className="flex flex-col items-center">
+            <a 
+              className="flex flex-col items-center gap-1"
+              data-testid={`nav-${item.label.toLowerCase()}`}
+            >
               <item.icon 
                 className={cn(
-                  "text-lg", 
-                  item.active ? "text-primary" : "text-neutral-700"
+                  item.active ? "text-emerald-600" : "text-neutral-600"
                 )} 
-                size={20} 
+                size={24} 
               />
               <span className={cn(
-                "text-xs mt-1", 
-                item.active ? "text-primary font-medium" : "text-neutral-700"
+                "text-xs", 
+                item.active ? "text-emerald-600 font-medium" : "text-neutral-600"
               )}>
                 {item.label}
               </span>
