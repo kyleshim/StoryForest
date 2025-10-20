@@ -24,9 +24,9 @@ export function SidebarNavigation({ childId }: SidebarNavigationProps) {
     },
     {
       icon: Compass,
-      label: 'Explore',
-      href: '/explore',
-      active: location.includes('/explore'),
+      label: 'Discover',
+      href: childId ? `/discover/${childId}` : '/',
+      active: location.includes('/discover'),
     },
     {
       icon: User,

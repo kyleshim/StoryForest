@@ -9,6 +9,7 @@ import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/home-page";
 import LibraryPage from "@/pages/library-page";
 import WishlistPage from "@/pages/wishlist-page";
+import DiscoverPage from "@/pages/discover-page";
 import ExplorePage from "@/pages/explore-page";
 import ProfilePage from "@/pages/profile-page";
 import AuthPage from "@/pages/auth-page";
@@ -49,6 +50,14 @@ function Router() {
       <Route path="/wishlist/:childId">
         <SignedIn>
           <WishlistPage />
+        </SignedIn>
+        <SignedOut>
+          <RedirectToSignIn />
+        </SignedOut>
+      </Route>
+      <Route path="/discover/:childId">
+        <SignedIn>
+          <DiscoverPage />
         </SignedIn>
         <SignedOut>
           <RedirectToSignIn />
